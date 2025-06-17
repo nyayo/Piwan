@@ -1,5 +1,5 @@
-import { View, Text, Image, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
-import React from 'react';
+import { View, Text, Image, TouchableOpacity, Dimensions, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useForm, FormProvider, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,7 @@ import * as z from 'zod';
 import KeyboardAwareScrollView from '../../components/KeyboardAwareView';
 import COLORS from '../../constants/theme';
 import CustomTextInput from '../../components/CustomTextInput';
+import { useAuth } from '../../context/authContext';
 
 const { width } = Dimensions.get("window");
 
@@ -29,13 +30,34 @@ const SignUpInfo = z.object({
 type SiginupScreen = z.infer<typeof SignUpInfo>;
 
 const SiginupScreen = () => {
+    const [loading, setLoading] = useState(false)
+    const { register } = useAuth();
     const router = useRouter();
     const form = useForm<SiginupScreen>({
         resolver: zodResolver(SignUpInfo),
     });
 
-    const handleSignUp: SubmitHandler<SiginupScreen> = async () => {
-        router.replace("/(tabs)")
+    const handleSignUp: SubmitHandler<SiginupScreen> = async (data) => {
+        if(!data.email.trim() || !data.password.trim()){
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        setLoading(true)
+        try {
+            const response = await register(data.username, data.email, data.password);
+            console.log(response)
+            
+            if (response.success) {
+                router.replace("/(auth)/login");
+            } else {
+                Alert.alert('Login Failed', response.message);
+            }
+        } catch (error) {
+            Alert.alert('Login Error', error.message);
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleLogInPress = () => {
@@ -92,7 +114,11 @@ const SiginupScreen = () => {
                         onPress={form.handleSubmit(handleSignUp)}
                         activeOpacity={0.9}
                     >
-                        <Text style={styles.signUpText}>Create an Account</Text>
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.signUpText}>Register</Text>
+                        )}
                     </TouchableOpacity>
                     
                     <View style={styles.logInSection}>

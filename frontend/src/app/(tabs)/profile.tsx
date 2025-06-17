@@ -29,7 +29,7 @@ export default function ProfileScreen() {
     avatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTi7OjMMcQCicrkDxnax7RiNpMkvyG7-AjtBg&s",
   };
 
-  const handleOptionPress = (option) => {
+  const handleOptionPress = (option: string) => {
     console.log(`Pressed: ${option}`);
     // router.push(`/${option}`);
   };

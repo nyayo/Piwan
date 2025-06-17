@@ -100,9 +100,9 @@ const adminQuery = `
 const userQuery = `
             CREATE TABLE IF NOT EXISTS users ( 
             id INT PRIMARY KEY AUTO_INCREMENT,
-            first_name VARCHAR(50) NOT NULL,
-            last_name VARCHAR(50) NOT NULL,
-            username VARCHAR(100) UNIQUE NOT NULL,
+            first_name VARCHAR(50),
+            last_name VARCHAR(50),
+            username VARCHAR(100) UNIQUE NOT NULL, 
             email VARCHAR(100) UNIQUE NOT NULL,
             phone VARCHAR(20),
             password VARCHAR(255) NOT NULL,

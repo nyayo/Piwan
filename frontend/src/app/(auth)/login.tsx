@@ -1,5 +1,5 @@
-import { View, Text, Image, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
-import React from 'react';
+import { View, Text, Image, TouchableOpacity, Dimensions, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useForm, FormProvider, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,28 +8,50 @@ import * as z from 'zod';
 import COLORS from '../../constants/theme';
 import CustomTextInput from '../../components/CustomTextInput';
 import KeyboardAwareScrollView from '../../components/KeyboardAwareView';
+import { useAuth } from '../../context/authContext';
 
 const { width } = Dimensions.get("window");
 
 const LoginInfo = z.object({
     email: z.string({message: "Email is required."}).min(1, {message: "Email must be longer than 1."}).regex(/^\S+@\S+\.\S+$/, 'Email must be in the format @example.com'),
-    password: z.string({message: "Password is required."}).min(1, {message: "Password must be longer than 1."}).min(8, {message: "Password must be at least 8 characters long"}),
+    password: z.string({message: "Password is required."}).min(1, {message: "Password must be longer than 1."}),
 });
 
 type LoginScreen = z.infer<typeof LoginInfo>; 
 
 const LoginScreen = () => {
+    const [loading, setLoading] = useState(false)
+    const { login } = useAuth();
     const router = useRouter();
     const form = useForm<LoginScreen>({
         resolver: zodResolver(LoginInfo)
     });
 
-    const handleLogin: SubmitHandler<LoginScreen> = async () => {
-        router.replace("/(tabs)")
+    const handleLogin: SubmitHandler<LoginScreen> = async (data) => {
+        if(!data.email.trim() || !data.password.trim()){
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        setLoading(true)
+        try {
+            const response = await login(data.email, data.password);
+            console.log(response)
+            
+            if (response.success) {
+                router.replace("/(tabs)");
+            } else {
+                Alert.alert('Login Failed', response.message);
+            }
+        } catch (error) {
+            Alert.alert('Login Error', error.message);
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleSignUpPress = () => {
-        router.push("/signup"); // Adjust the route as needed
+        router.push("/signup");
     }
 
     return (
@@ -65,7 +87,11 @@ const LoginScreen = () => {
                         onPress={form.handleSubmit(handleLogin)}
                         activeOpacity={0.9}
                     >
-                        <Text style={styles.loginButtonText}>Log In</Text>
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.loginButtonText}>Sign In</Text>
+                        )}
                     </TouchableOpacity>
                     
                     <View style={styles.signUpSection}>

@@ -4,16 +4,48 @@ import jwt from 'jsonwebtoken';
 
 export const registerUser = async(user) => {
     try {
-        const hashedPassword = await bcrypt.hash(user.password, 10)
-        const query = `INSERT INTO users (username, first_name, last_name, email, password) VALUES (?,?,?,?,?)`
-        const values = [user.username, user.first_name, user.last_name, user.email, hashedPassword];
+        const hashedPassword = await bcrypt.hash(user.password, 10);
 
-        await pool.query(query, values);
-        return {success: true, message: 'User Registered Successfully.'}
+        const query = `INSERT INTO users (username, email, password) VALUES (?,?,?)`;
+        const values = [user.username, user.email, hashedPassword];
+
+        const [result] = await pool.query(query, values);
+        const userId = result.insertId;
+        const role = 'user';
+        
+        const token = jwt.sign(
+            { id: userId, email: user.email, role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1h' }
+        );
+        const response = {
+            success: true, 
+            message: 'User Registered Successfully.',
+            token,
+            user: {
+                id: userId,
+                email: user.email,
+                username: user.username,
+                role
+            }
+        };
+        return response;
+        
     } catch (error) {
-        return {success: false, message: 'Registration failed.'}
+        if (error.name === 'JsonWebTokenError') {
+            return { success: false, message: 'Token creation failed' };
+        }
+        
+        if (error.code === 'ER_DUP_ENTRY') {
+            return { success: false, message: 'Email already exists' };
+        }
+        
+        return { 
+            success: false, 
+            message: 'Registration failed: ' + error.message 
+        };
     }
-}
+};
 
 export const registerConsultant = async(user) => {
     try {
@@ -67,7 +99,7 @@ export const loginUser = async(email, password) => {
 
         return {
             success: true,
-            message: 'Login Successful', 
+            message: 'Login Successful',  
             token,
             user: {
                 id: user.id,

@@ -7,6 +7,8 @@ import {
 import { useColorScheme } from "react-native";
 import tamaguiConfig from "../../tamagui.config"
 import { TamaguiProvider } from "tamagui";
+import { AuthProvider } from "../context/authContext";
+import { UserProvider } from "../context/userContext";
 
 export default function RootLayout() {
     return <RootLayoutNav />;
@@ -18,7 +20,11 @@ function RootLayoutNav() {
     return (
         <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme!}>
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-            <Stack screenOptions={{ headerShown: false}} />
+            <AuthProvider>
+                <UserProvider>
+                    <Stack screenOptions={{ headerShown: false}} />
+                </UserProvider>
+            </AuthProvider>
         </ThemeProvider>
         </TamaguiProvider>
     );
