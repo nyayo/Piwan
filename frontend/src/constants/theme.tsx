@@ -5,21 +5,21 @@ const COLORS = {
     textSecondary: "#6d93b8",
     textDark: "#0d2b43",
     placeholderText: "#767676",
-    background: "#f8fafc",
-    cardBackground: "#ffffff",
+    background: "#e3f2fd",
+    cardBackground: "#f5f9ff",
     inputBackground: "#f0f8ff",
-    border: "#e2e8f0",
+    border: "#bbdefb",
     white: "#ffffff",
     black: "#000000",
-    grey: "#64748b",
-    lightGrey: "#f1f5f9",
-    error: "#ef4444",
-    success: "#10b981",
-    warning: "#f59e0b",
-    primaryLight: "#dbeafe",
-    selectedTab: "#1976D2",
-    inactiveTab: "#94a3b8",
-    shadow: "rgba(0, 0, 0, 0.1)"
+    grey: "#808080",
+    lightGrey: "#f1f1f1",
+    error: "#FF4444",
+    primaryLight: "#E6F0FA",
+    selectedDate: "#1976D2",
+    infoBackground: "#E8F5E8",
+    infoText: "#2E7D32",
+    gradientStart: "#4A90E2",
+    gradientEnd: "#7B68EE"
 };
 
 export default COLORS;

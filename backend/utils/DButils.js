@@ -31,23 +31,23 @@ const reviewQuery = `
 `
 
 const appointmentsQuery = `
-            CREATE TABLE IF NOT EXISTS appointments (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            consultant_id INT NOT NULL,
-            title VARCHAR(255) NOT NULL,
-            description TEXT,
-            appointment_date DATETIME NOT NULL,
-            duration_minutes INT DEFAULT 60,
-            status ENUM('pending', 'confirmed', 'cancelled', 'completed', 'no_show') DEFAULT 'pending',
-            cancellation_reason TEXT,
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (consultant_id) REFERENCES consultants(id) ON DELETE CASCADE
-            );
-            `
+    CREATE TABLE IF NOT EXISTS appointments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    consultant_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    appointment_date DATETIME NOT NULL,
+    duration_minutes INT DEFAULT 60,
+    status ENUM('pending', 'confirmed', 'cancelled', 'completed', 'no_show') DEFAULT 'pending',
+    cancellation_reason TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (consultant_id) REFERENCES consultants(id) ON DELETE CASCADE
+    );
+    `
 
 const consultantsQuery = `
             CREATE TABLE IF NOT EXISTS consultants (

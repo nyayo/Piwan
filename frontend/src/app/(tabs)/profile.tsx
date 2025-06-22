@@ -14,24 +14,28 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ProfileOption from '../../components/ProfileOption';
 import COLORS from '../../constants/theme';
+import { useUser } from '../../context/userContext';
 import { StatusBar } from 'expo-status-bar';
 
 export default function ProfileScreen() {
+  const {user} = useUser();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
 
-  const user = {
-    name: "Okello John",
-    email: "okellojohn@gmail.com",
-    bio: "Passionate developer building amazing mobile experiences. Love coding, design, and connecting with people.",
-    avatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTi7OjMMcQCicrkDxnax7RiNpMkvyG7-AjtBg&s",
-  };
-
   const handleOptionPress = (option: string) => {
-    console.log(`Pressed: ${option}`);
-    // router.push(`/${option}`);
+    if(option === 'profile'){
+      router.push("/(screens)/profileUpdate");
+    } else {
+      if(option === 'privacy') {
+        router.push("/(screens)/privacySecurity");
+      } else {
+        if(option === 'settings'){
+          router.push("/(screens)/preference");
+        }
+      }
+    }
   };
 
   const handleLogoutCustom = () => {
@@ -69,15 +73,15 @@ export default function ProfileScreen() {
         width: '100%', 
         aspectRatio: 19/7
         }} 
-        source={{ uri: user.avatar,}}
+        source={{ uri: user.profile_image,}}
         blurRadius={8}
         />
         <Image 
         style={styles.avatar} 
-        source={{uri: user.avatar}} 
+        source={{uri: user.profile_image}} 
         />
         <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userName}>{user.first_name} {user.last_name}</Text>
           <Text style={styles.userEmail}>{user.email}</Text>
           <Text style={styles.userBio}>{user.bio}</Text>
         </View>

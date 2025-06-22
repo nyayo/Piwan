@@ -1,24 +1,43 @@
-import { createAppointment, getAppointments, updateStatus, appointmentReview } from "../services/AppointmentServices.js"
+import { createAppointment, getAppointments, updateStatus, consultantReview, getConsultantAvailability, fetchConsultantReviewsPaginated } from "../services/AppointmentServices.js"
 
 export const create = async(req, res) => {
-    const { consultant_id, title, description, appointment_date, duration_minutes } = req.body;
+    const { consultant_id, title, description, appointment_date, appointment_time, duration_minutes } = req.body;
     const user_id = req.user.id;
 
     if (req.user.role !== 'user') {
         return res.status(403).json({ error: 'Only users can create appointments' });
     }
 
-    const appointment = { consultant_id, title, description, appointment_date, duration_minutes };
+    // Validate required fields
+    if (!consultant_id || !appointment_date || !appointment_time) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Consultant ID, appointment date, and time are required' 
+        });
+    }
+
+    const appointment = { 
+        consultant_id, 
+        title: title || 'Consultation', 
+        description, 
+        appointment_date, 
+        appointment_time, 
+        duration_minutes 
+    };
 
     try {
         const response = await createAppointment(appointment, user_id);
         if(response.success){
-            return res.status(200).json(response);
-        }else {
+            return res.status(201).json(response);
+        } else {
             return res.status(400).json(response);
         }
     } catch (error) {
-        return res.status(500).json({ success: false, message: 'Failed to create an appointment. Please try again later.' });
+        console.error('Error in create appointment controller:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to create an appointment. Please try again later.' 
+        });
     }
 }
 
@@ -38,6 +57,73 @@ export const get = async(req, res) => {
         }
     } catch (error) {
         return res.status(500).json({ success: false, message: 'No appointments found. Please try again later.' });
+    }
+}
+
+export const getAvailableAppointments = async(req, res) => {
+        try {
+            const { consultantId } = req.params;
+            const { date_from, date_to } = req.query;
+            
+            if (!date_from || !date_to) {
+                return res.status(400).json({
+                    success: false,
+                    message: "date_from and date_to are required"
+                });
+            }
+            
+            const result = await getConsultantAvailability(consultantId, date_from, date_to);
+            
+            if (result.success) {
+                res.json(result);
+            } else {
+                res.status(500).json(result);
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: "Server error"
+            });
+        }
+}
+
+export const getUserAppointments = async(req, res) => {
+    try {
+        const { userId } = req.params;
+        const appointment = req.query;
+        
+        const result = await getAppointments(userId, 'user', appointment);
+        
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(500).json(result);
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+}
+
+export const getConsultantAppointments = async(req, res) => {
+    try {
+        const { consultantId } = req.params;
+        const appointment = req.query;
+        
+        const result = await getAppointments(consultantId, 'consultant', appointment);
+        
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(500).json(result);
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
     }
 }
 
@@ -61,7 +147,7 @@ export const update = async(req, res) => {
 }
 
 export const review = async(req, res) => {
-    const appointmentId = req.params.id;
+    const consultantId = req.params.id;
     const { rating, review_text } = req.body;
     const userId = req.user.id;
 
@@ -72,7 +158,7 @@ export const review = async(req, res) => {
     const review = { rating, review_text };
 
     try {
-        const response = await appointmentReview(userId, appointmentId, review);
+        const response = await consultantReview(userId, consultantId, review);
         if(response.success){
             return res.status(200).json(response);
         }else {
@@ -82,3 +168,60 @@ export const review = async(req, res) => {
         return res.status(500).json({ success: false, message: 'Failed to review an appointment. Please try again later.' });
     }
 }
+
+export const getConsultantReviewsPaginated = async (req, res) => {
+    const consultantId = req.params.consultantId;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const sortBy = req.query.sortBy || 'created_at'; // created_at, rating
+    const sortOrder = req.query.sortOrder || 'DESC'; // ASC, DESC
+
+    // Validate consultant ID
+    if (!consultantId || isNaN(consultantId)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Valid consultant ID is required' 
+        });
+    }
+
+    // Validate pagination parameters
+    if (page < 1 || limit < 1 || limit > 50) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Invalid pagination parameters' 
+        });
+    }
+
+    // Validate sorting parameters
+    const validSortFields = ['created_at', 'rating'];
+    const validSortOrders = ['ASC', 'DESC'];
+    
+    if (!validSortFields.includes(sortBy) || !validSortOrders.includes(sortOrder)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Invalid sorting parameters' 
+        });
+    }
+
+    try {
+        const response = await fetchConsultantReviewsPaginated(
+            consultantId, 
+            page, 
+            limit, 
+            sortBy, 
+            sortOrder
+        );
+        
+        if (response.success) {
+            return res.status(200).json(response);
+        } else {
+            return res.status(404).json(response);
+        }
+    } catch (error) {
+        console.error('Error in getConsultantReviewsPaginated controller:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to fetch consultant reviews. Please try again later.' 
+        });
+    }
+};

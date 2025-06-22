@@ -5,7 +5,7 @@ import COLORS from '../constants/theme'
 
 const KeyboardAwareScrollView = ({children} : PropsWithChildren) => {
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['top', 'bottom']}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['bottom']}>
             <KeyboardAvoidingView 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}  
                 style={{ flex: 1 }}

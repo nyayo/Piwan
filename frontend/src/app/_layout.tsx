@@ -9,6 +9,7 @@ import tamaguiConfig from "../../tamagui.config"
 import { TamaguiProvider } from "tamagui";
 import { AuthProvider } from "../context/authContext";
 import { UserProvider } from "../context/userContext";
+import { ConsultantProvider } from "../context/consultantContext";
 
 export default function RootLayout() {
     return <RootLayoutNav />;
@@ -22,7 +23,9 @@ function RootLayoutNav() {
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
             <AuthProvider>
                 <UserProvider>
-                    <Stack screenOptions={{ headerShown: false}} />
+                    <ConsultantProvider>
+                        <Stack screenOptions={{ headerShown: false}} />
+                    </ConsultantProvider>
                 </UserProvider>
             </AuthProvider>
         </ThemeProvider>

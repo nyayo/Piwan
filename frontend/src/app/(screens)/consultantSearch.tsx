@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
 View,
 Text,
@@ -9,11 +9,15 @@ StyleSheet,
 SafeAreaView,
 StatusBar,
 useWindowDimensions,
-Image
+Image,
+Pressable
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { widths } from '@tamagui/config';
 import { router, useNavigation } from 'expo-router';
+import { useUser } from '../../context/userContext';
+import { useConsultant } from '../../context/consultantContext';
+import generateTimeSlots from '../../helper/timeSlot';
 
 const COLORS = {
 primary: "#1976D2",
@@ -33,50 +37,19 @@ error: "#FF4444",
 primaryLight: "#E6F0FA"
 };
 
-const practitioners = [
- {
-   id: 1,
-   name: "Dr. Claire Jenkins",
-   rating: 4.9,
-   price: 80,
-   profilePicture: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop&crop=face",
-   times: ["12:00 PM", "12:30 PM", "4:20 PM"],
-   isFavorite: true
- },
- {
-   id: 2,
-   name: "Dr. Susanne Moore",
-   rating: 5.0,
-   price: 95,
-   profilePicture: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&crop=face",
-   times: ["2:00 PM", "2:30 PM", "3:20 PM"],
-   isFavorite: false
- },
- {
-   id: 3,
-   name: "Dr. Aarav Patel",
-   rating: 5.0,
-   price: 100,
-   profilePicture: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop&crop=face",
-   times: ["10:00 AM", "11:20 AM", "1:00 PM"],
-   isFavorite: false
- },
- {
-   id: 4,
-   name: "Dr. James Wilson",
-   rating: 4.8,
-   price: 85,
-   profilePicture: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&crop=face",
-   times: ["9:00 AM", "10:30 AM", "2:00 PM"],
-   isFavorite: false
- }
-];
-
 export default function SearchScreen() {
+    const {consultants, getConsultants} = useUser();
+    const { selectConsultant } = useConsultant();
     const {width} = useWindowDimensions();
 const [searchQuery, setSearchQuery] = useState('');
 const [favorites, setFavorites] = useState(new Set([1]));
 const navigation = useNavigation();
+
+useEffect(() => {
+    getConsultants();
+}, []);
+
+// console.log(consultants)
 
 const toggleFavorite = (id: number) => {
     const newFavorites = new Set(favorites);
@@ -88,57 +61,81 @@ const toggleFavorite = (id: number) => {
     setFavorites(newFavorites);
 };
 
-const filteredPractitioners = practitioners.filter(practitioner =>
-    practitioner.name.toLowerCase().includes(searchQuery.toLowerCase())
+const filteredConsultants = consultants.filter(consultant => 
+    consultant?.username?.toLowerCase().includes(searchQuery.toLowerCase())
 );
 
-const renderTimeSlot = (time: string, index : number) => (
+const renderTimeSlot = (timeSlot: string, index : number) => (
     <View key={index} style={styles.timeSlot}>
-    <Text style={styles.timeText}>{time}</Text>
+    <Text style={styles.timeText}>{timeSlot.time}</Text>
     </View>
 );
 
-const renderPractitioner = (practitioner) => (
-    <View key={practitioner.id} style={styles.card}>
-   {/* First Row: Profile Picture, Name, Rating, Specialty, and Heart */}
-    <View style={styles.topRow}>
-        <Image 
-            source={{ uri: practitioner.profilePicture || 'https://via.placeholder.com/48' }}
-            style={styles.profilePicture}
-        />
-        <View style={styles.mainInfo}>
-            <View style={styles.nameRatingRow}>
-                <Text style={styles.practitionerName}>{practitioner.name}</Text>
-                <View style={styles.ratingContainer}>
-                    <Text style={styles.rating}>{practitioner.rating}</Text>
-                    <Ionicons name="star" size={14} color="#FFD700" />
+const renderPractitioner = (consultant) => {    
+    const times = generateTimeSlots(consultant.available_from, consultant.available_to, 90);
+
+    return (
+        <Pressable 
+        key={consultant.id} 
+        style={styles.card}
+        >
+           {/* First Row: Profile Picture, Name, Rating, Specialty, and Heart */}
+            <Pressable 
+            style={styles.topRow}
+            onPress={() => {
+                    // Store consultant data in context
+                    selectConsultant(consultant);
+                    // Navigate to details screen (no params needed)
+                    router.push('(screens)/ConsultantDetailsScreen');
+                }}
+            >
+                <Image 
+                    source={{ uri: consultant.profile_image || 'https://via.placeholder.com/48' }}
+                    style={styles.profilePicture}
+                />
+                <View style={styles.mainInfo}>
+                    <View style={styles.nameRatingRow}>
+                        <Text style={styles.practitionerName}>{consultant.first_name} {consultant.last_name}</Text>
+                        <View style={styles.ratingContainer}>
+                            <Text style={styles.rating}>{consultant.rating}</Text>
+                            <Ionicons name="star" size={14} color="#FFD700" />
+                        </View>
+                    </View>
+                    <Text style={styles.specialty}>{consultant.profession || 'General Consultant'}</Text>
                 </View>
+                <TouchableOpacity onPress={() => toggleFavorite(consultant.id)}>
+                    <Ionicons 
+                        name={favorites.has(consultant.id) ? "heart" : "heart-outline"} 
+                        size={20} 
+                        color={favorites.has(consultant.id) ? COLORS.error : COLORS.placeholderText} 
+                    />
+                </TouchableOpacity>
+            </Pressable>
+
+            {/* Availability Text */}
+            <Text style={styles.availabilityText}>Available appointments for today</Text>
+
+            {/* Time Slots and Button */}
+            <View style={styles.bottomSection}>
+                <ScrollView horizontal contentContainerStyle={styles.timeSlotsContainer}>
+                    {times?.map((timeSlot: string, index : number) => renderTimeSlot(timeSlot, index))}
+                </ScrollView>
+                <TouchableOpacity 
+                    style={[styles.arrowButton, {flexDirection: "row", justifyContent: "center", alignItems: "center"}]} 
+                    onPress={() => {
+                        // Store consultant data in context
+                        selectConsultant(consultant);
+                        // Navigate to details screen (no params needed)
+                        router.push('(screens)/createAppointment');
+                    }}
+                >
+                    <Text style={{fontWeight: "600", fontSize: 16, marginRight: 5, color: COLORS.white}}>Book Now</Text>
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.white} />
+                </TouchableOpacity>
             </View>
-            <Text style={styles.specialty}>General practitioners</Text>
-        </View>
-        <TouchableOpacity onPress={() => toggleFavorite(practitioner.id)}>
-            <Ionicons 
-                name={favorites.has(practitioner.id) ? "heart" : "heart-outline"} 
-                size={20} 
-                color={favorites.has(practitioner.id) ? COLORS.error : COLORS.placeholderText} 
-            />
-        </TouchableOpacity>
-    </View>
-
-    {/* Availability Text */}
-    <Text style={styles.availabilityText}>Available appointments for today</Text>
-
-    {/* Time Slots and Button */}
-    <View style={styles.bottomSection}>
-        <View style={styles.timeSlotsContainer}>
-            {practitioner.times.map((time: string, index : number) => renderTimeSlot(time, index))}
-        </View>
-        <TouchableOpacity style={styles.arrowButton} onPress={() => router.push('(screens)/createAppointment')}>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.white} />
-        </TouchableOpacity>
-    </View>
-    </View>
-);
+        </Pressable>
+    );
+};
 
 return (
     <SafeAreaView style={styles.container}>
@@ -150,7 +147,7 @@ return (
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <Ionicons name="arrow-back" size={24} color={COLORS.white || '#333'} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>General practitioners</Text>
+            <Text style={styles.headerTitle}>General consultants</Text>
         </View>
     </View>
     <ScrollView style={styles.scrollView}>
@@ -179,7 +176,7 @@ return (
         </View>
         {/* Practitioners List */}
         <View style={styles.scrollContent}>
-            {filteredPractitioners.map(renderPractitioner)}
+            {filteredConsultants.map(renderPractitioner)}
         </View>
     </ScrollView>
 
@@ -344,6 +341,7 @@ timeSlotsContainer: {
     alignItems: 'center',
     gap: 8,
     flex: 1,
+    overflow: "hidden"
 },
 timeSlot: {
     backgroundColor: COLORS.white,
@@ -362,7 +360,5 @@ arrowButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 8,
     padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
 },
 });

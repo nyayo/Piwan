@@ -105,6 +105,8 @@ export const loginUser = async(email, password) => {
                 id: user.id,
                 email: user.email,
                 username: user.username,
+                first_name: user.first_name,
+                last_name: user.last_name,
                 role
             }
         };

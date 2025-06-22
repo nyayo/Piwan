@@ -1,6 +1,7 @@
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native'
 import React from 'react'
 import COLORS from '../constants/theme';
+import { formatTime, convertToLocalDate } from '../helper/convertDateTime';
 import { PastType } from '../data/past';
 
 type CarouselCardProps = {
@@ -10,15 +11,15 @@ type CarouselCardProps = {
 const CarouselCard = ({ appointment }: CarouselCardProps) => {
     return (
         <View style={styles.pastCard}>
-            <Image source={{ uri: appointment.image }} style={styles.pastDoctorAvatar} />
+            <Image source={{ uri: appointment.profile_image }} style={styles.pastDoctorAvatar} />
             <View style={styles.pastDoctorInfo}>
-            <Text style={styles.pastDoctorName}>{appointment.doctorName}</Text>
+            <Text style={styles.pastDoctorName}>{appointment.consultant_name}</Text>
             <Text style={styles.pastAppointmentDetails}>
-                {appointment.specialty} — {appointment.date} • {appointment.time}
+                {appointment.profession} — {convertToLocalDate(appointment.appointment_date)} • {formatTime(appointment.appointment_time)}
             </Text>
             </View>
             <View style={styles.pastPriceContainer}>
-            <Text style={styles.pastPrice}>{appointment.price}$</Text>
+            <Text style={styles.pastPrice}>{appointment.status}</Text>
             </View>
         </View>
         );

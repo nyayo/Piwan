@@ -9,15 +9,13 @@ const config = createTamagui(defaultConfig)
 
 export default function App() {
     const {loading, isAuthenticated} = useAuth();
+    console.log(isAuthenticated)
     return (
         <>
-                <Redirect href={'/(tabs)'} />
-            {/* {
-                isAuthenticated ? (
-                    <Redirect href={'/(auth)/signup'} />
-                ) : (
-                )
-            } */}
+            {/* <Redirect href={'/(screens)/profileUpdate'} /> */}
+            {
+                isAuthenticated ? <Redirect href={'/(tabs)'} /> : <Redirect href={'/(auth)/login'} />
+            }
         </>
     );
 }

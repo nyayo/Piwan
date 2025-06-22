@@ -68,7 +68,7 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
                             onPress={() => handleEventPress(event)}
                         >
                             <View style={styles.eventOptionIcon}>
-                                <Image style={{ width: 60, height: 60}} source={event.image} />
+                                <Image style={styles.eventImage} source={event.image} />
                             </View>
                             <View style={styles.eventOptionContent}>
                                 <Text style={styles.eventOptionTitle}>{event.title}</Text>
@@ -230,29 +230,37 @@ const styles = StyleSheet.create({
     },
     eventOption: {
         flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 12,
+        alignItems: 'center', // Changed from 'center' to 'stretch'
+        paddingVertical: 0, // Removed vertical padding
+        paddingHorizontal: 0, // Removed horizontal padding
         marginBottom: 12,
         borderRadius: 12,
         backgroundColor: '#F9F9F9',
         borderWidth: 1,
         borderColor: COLORS.border || '#E0E0E0',
+        overflow: 'hidden', // Ensures content stays within rounded bounds
+        minHeight: 80, // Set minimum height for the container
     },
     eventOptionAdded: {
         backgroundColor: COLORS.primaryLight || '#E6F0FA',
         borderColor: COLORS.primary,
     },
     eventOptionIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        flex: 1, // Takes up 1/3 of the available space
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        overflow: 'hidden', // Ensures image stays within bounds
+    },
+    eventImage: {
+        width: '100%',
+        height: '100%',
+        minHeight: 80, // Matches container minimum height
     },
     eventOptionContent: {
-        flex: 1,
+        flex: 2, // Takes up 2/3 of the available space
+        paddingVertical: 16, // Add padding back to content
+        paddingHorizontal: 16,
+        justifyContent: 'center',
     },
     eventOptionTitle: {
         fontSize: 16,
@@ -268,6 +276,9 @@ const styles = StyleSheet.create({
     eventOptionActions: {
         flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: 12, // Add horizontal padding to actions
+        paddingVertical: 16, // Add vertical padding to actions
+        minWidth: 40, // Ensures actions don't get squeezed
     },
     
     // Event Detail Styles

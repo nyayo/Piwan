@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, Image, useWindowDimensions, TouchableOpacity, Linking, Alert, FlatList, Modal, Dimensions } from 'react-native';
-import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, useWindowDimensions, TouchableOpacity, Linking, Alert, FlatList, Modal, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -18,6 +18,7 @@ import Activities from '../../components/Activities';
 import CustomModal from '../../components/CustomModal';
 import { data, DataType } from '../../data/card-data';
 import { useUser } from '../../context/userContext';
+import { useAuth } from '../../context/authContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -35,9 +36,28 @@ const Index = () => {
   const [showEventModal, setShowEventModal] = useState<boolean>(false);
   const [upcomingEvents, setUpcomingEvents] = useState<DataType[]>([]);
   const navigation = useNavigation();
-  const {profile} = useUser();
+  const { loading, profile, isAuthenticated } = useUser();
+  const { user } = useUser();
+  console.log(isAuthenticated)
 
   const activities = useMemo(() => activities_data, []);
+
+  useEffect(() => {
+    if (isAuthenticated && !user && !loading) {
+      profile();
+    }
+  }, [user, loading, profile, isAuthenticated]);
+
+  if (loading) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </SafeAreaView>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -48,14 +68,14 @@ const Index = () => {
             <Image
               style={styles.profileImg}
               source={{
-                uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTi7OjMMcQCicrkDxnax7RiNpMkvyG7-AjtBg&s',
+                uri: user.profile_image,
               }}
             />
             <View style={styles.profileInfo}>
-              <Text style={styles.homeGreeting}>Hi, {profile.username}</Text>
+              <Text style={styles.homeGreeting}>Hi, {user?.first_name} {user?.last_name}</Text>
               <Text style={styles.greeting}>How is your mental health</Text>
             </View>
-            <View style={styles.rightIcons}>
+            <View style={styles.rightIcons}> 
               {/* <TouchableOpacity onPress={() => router.push('(screens)/consultantSearch')}>
                 <Ionicons name="search" size={24} color={COLORS.textDark} />
               </TouchableOpacity> */}
@@ -169,6 +189,15 @@ const Index = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: COLORS.textDark,
   },
   // Top Bar Styles
   topBar: {
