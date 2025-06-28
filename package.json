@@ -5,6 +5,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
     "react-hook-form": "^7.57.0",
+    "react-native-webview": "^13.15.0",
     "zod": "^3.25.62"
   }
 }

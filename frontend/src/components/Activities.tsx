@@ -1,7 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } from 'react-native'
 import React from 'react'
 import { ActivityType } from '../data/activity-data';
 import COLORS from '../constants/theme';
+
+// Helper to normalize image source for local and remote images
+const getImageSource = (image: any) => {
+    if (typeof image === 'string') {
+        // Remote URL
+        return { uri: image };
+    }
+    // Local require
+    return image;
+};
 
 type Activities = {
     index: number;
@@ -19,10 +29,10 @@ const Activities = ({index, activity}:Activities) => {
         >
             <Image
             style={styles.activityImage}
-            source={{ uri: activity.image }}
-            defaultSource={{ uri: 'https://via.placeholder.com/80' }}
+            source={getImageSource(activity.image)}
+            defaultSource={require('../assets/icons/default.png')}
             />
-            <Text style={styles.activityText}>{`${activity.type} • ${activity.timestamp}`}</Text>
+            <Text style={styles.activityText}>{activity.timestamp}</Text>
         </TouchableOpacity>
     )
 }
@@ -33,8 +43,8 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     activityImage: {
-        width: 80,
-        height: 80,
+        width: 42,
+        height: 42,
         borderRadius: 40,
         borderWidth: 1,
         borderColor: COLORS.border,

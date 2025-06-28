@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure base URL (update with your backend URL)
-const API_BASE_URL = 'https://78a8-41-75-182-187.ngrok-free.app/api'; // Use your local IP
+const API_BASE_URL = 'https://2490-41-75-184-146.ngrok-free.app/api'; // Use your local IP
 // For development on physical device, use your computer's IP address
 // For iOS simulator: http://localhost:3000/api
 // For Android emulator: http://10.0.2.2:3000/api
@@ -16,22 +16,94 @@ const apiClient = axios.create({
   },
 });
 
+// --- Token Storage Helpers ---
+export const setAccessToken = async (token) => {
+  await AsyncStorage.setItem('accessToken', token);
+};
+export const setRefreshToken = async (token) => {
+  await AsyncStorage.setItem('refreshToken', token);
+};
+export const getAccessToken = async () => {
+  return await AsyncStorage.getItem('accessToken');
+};
+export const getRefreshToken = async () => {
+  return await AsyncStorage.getItem('refreshToken');
+};
+export const clearTokens = async () => {
+  await AsyncStorage.removeItem('accessToken');
+  await AsyncStorage.removeItem('refreshToken');
+  await AsyncStorage.removeItem('authToken');
+  await AsyncStorage.removeItem('userData');
+};
+
 // Add token to requests automatically
 apiClient.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('authToken');
+  const token = await getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Handle token expiration
+// Handle token expiration and refresh
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('userData');
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({resolve, reject});
+        })
+        .then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return apiClient(originalRequest);
+        })
+        .catch(err => {
+          return Promise.reject(err);
+        });
+      }
+      isRefreshing = true;
+      try {
+        const refreshToken = await getRefreshToken();
+        if (!refreshToken) {
+          await clearTokens();
+          return Promise.reject(error);
+        }
+        const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { refreshToken });
+        if (res.data && res.data.accessToken) {
+          await setAccessToken(res.data.accessToken);
+          apiClient.defaults.headers['Authorization'] = 'Bearer ' + res.data.accessToken;
+          processQueue(null, res.data.accessToken);
+          originalRequest.headers['Authorization'] = 'Bearer ' + res.data.accessToken;
+          return apiClient(originalRequest);
+        } else {
+          await clearTokens();
+          processQueue(new Error('Refresh failed'), null);
+          return Promise.reject(error);
+        }
+      } catch (err) {
+        await clearTokens();
+        processQueue(err, null);
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
+      }
     }
     return Promise.reject(error);
   }
@@ -61,34 +133,33 @@ export const handleApiError = (error) => {
 };
 
 // Storage functions
-export const storeAuthData = async (token, userData) => {
-  await AsyncStorage.setItem('authToken', token);
+export const storeAuthData = async (accessToken, refreshToken, userData) => {
+  await setAccessToken(accessToken);
+  await setRefreshToken(refreshToken);
   await AsyncStorage.setItem('userData', JSON.stringify(userData));
 };
 
 export const clearAuthData = async () => {
-  await AsyncStorage.removeItem('authToken');
-  await AsyncStorage.removeItem('userData');
+  await clearTokens();
 };
 
 export const getAuthData = async () => {
   try {
-    const token = await AsyncStorage.getItem('authToken');
+    const accessToken = await getAccessToken();
+    const refreshToken = await getRefreshToken();
     const user = await AsyncStorage.getItem('userData');
     return {
-      token,
+      accessToken,
+      refreshToken,
       user: user ? JSON.parse(user) : null
     };
   } catch (error) {
     console.error('Error getting auth data:', error);
-    return { token: null, user: null };
+    return { accessToken: null, refreshToken: null, user: null };
   }
 };
 
-export const getStoredToken = async () => {
-  return await AsyncStorage.getItem('authToken');
-};
-
+export const getStoredToken = getAccessToken;
 export const getStoredUserData = async () => {
   const userData = await AsyncStorage.getItem('userData');
   return userData ? JSON.parse(userData) : null;
@@ -99,9 +170,11 @@ export const loginUser = async (email, password) => {
   try {
     const response = await apiClient.post('/auth/login-user', { email, password });
     
-    if (response.data.success) {
-      await storeAuthData(response.data.token, response.data.user);
+    if (response.data.success && response.data.accessToken && response.data.refreshToken) {
+      await storeAuthData(response.data.accessToken, response.data.refreshToken, response.data.user);
     }
+
+    console.log(response.data)
     
     return response.data;
   } catch (error) {
@@ -113,8 +186,8 @@ export const registerUser = async (username, email, password) => {
   try {
     const response = await apiClient.post('/auth/register-user', { username, email, password });
     
-    if (response.data.success) {
-      await storeAuthData(response.data.token, response.data.user);
+    if (response.data.success && response.data.accessToken && response.data.refreshToken) {
+      await storeAuthData(response.data.accessToken, response.data.refreshToken, response.data.user);
     }
     
     return response.data;
@@ -149,6 +222,14 @@ export const getUserProfile = async () => {
 };
 
 export const logoutUser = async () => {
+  const refreshToken = await getRefreshToken();
+  if (refreshToken) {
+    try {
+      await apiClient.post('/auth/logout', { refreshToken });
+    } catch (e) {
+      console.log(e);
+    }
+  }
   await clearAuthData();
 };
 
@@ -164,7 +245,7 @@ export const updateUserProfile = async (profileData) => {
     if (profileData.dob?.trim()) updateData.dob = profileData.dob.trim();
     if (profileData.gender) updateData.gender = profileData.gender;
     if (profileData.profileImage) updateData.profile_image = profileData.profileImage;
-
+    
     const response = await apiClient.patch('/users/update-profile', updateData);
     
     if (response.data.success) {
@@ -259,22 +340,28 @@ export const createAppointment = async (appointmentData) => {
         if (!appointmentData) {
             throw new Error('Appointment data is required');
         }
-        
         // Validate required fields
         if (!appointmentData.consultant_id) {
             throw new Error('Consultant ID is required');
         }
-        
-        if (!appointmentData.appointment_date || !appointmentData.appointment_time) {
-            throw new Error('Appointment date and time are required');
+        if (!appointmentData.appointment_datetime) {
+            throw new Error('Appointment datetime (UTC ISO string) is required');
         }
-        
+        // Only send appointment_datetime, not appointment_date or appointment_time
         const response = await apiClient.post('/appointments/create', appointmentData);
-        
         return response.data;
     } catch (error) {
         throw handleApiError(error);
     }
+};
+
+export const getRecentActivities = async () => {
+  try {
+    const response = await apiClient.get('/activities');
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
 };
 
 // Add these to your services/api.js file

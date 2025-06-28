@@ -1,7 +1,8 @@
-import { createAppointment, getAppointments, updateStatus, consultantReview, getConsultantAvailability, fetchConsultantReviewsPaginated } from "../services/AppointmentServices.js"
+import { createAppointment, getAppointments, updateStatus, consultantReview, getConsultantAvailability, fetchConsultantReviewsPaginated, cancelExpiredAppointments } from "../services/AppointmentServices.js"
+import { logActivity } from "../routes/activityRoutes.js";
 
 export const create = async(req, res) => {
-    const { consultant_id, title, description, appointment_date, appointment_time, duration_minutes } = req.body;
+    const { consultant_id, title, description, appointment_datetime, duration_minutes } = req.body;
     const user_id = req.user.id;
 
     if (req.user.role !== 'user') {
@@ -9,10 +10,10 @@ export const create = async(req, res) => {
     }
 
     // Validate required fields
-    if (!consultant_id || !appointment_date || !appointment_time) {
+    if (!consultant_id || !appointment_datetime) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Consultant ID, appointment date, and time are required' 
+            message: 'Consultant ID and appointment_datetime are required' 
         });
     }
 
@@ -20,14 +21,15 @@ export const create = async(req, res) => {
         consultant_id, 
         title: title || 'Consultation', 
         description, 
-        appointment_date, 
-        appointment_time, 
+        appointment_datetime, 
         duration_minutes 
     };
 
     try {
         const response = await createAppointment(appointment, user_id);
         if(response.success){
+            // Log activity for user
+            await logActivity(req.user.id, req.user.role, 'appointment_create', `Created appointment with consultant ID ${consultant_id}`);
             return res.status(201).json(response);
         } else {
             return res.status(400).json(response);
@@ -49,6 +51,8 @@ export const get = async(req, res) => {
     const appointment = { status, date_from, date_to };
 
     try {
+        // Cancel expired appointments before fetching
+        await cancelExpiredAppointments();
         const response = await getAppointments(userId, userType, appointment);
         if(response.success){
             return res.status(200).json(response);
@@ -91,9 +95,9 @@ export const getUserAppointments = async(req, res) => {
     try {
         const { userId } = req.params;
         const appointment = req.query;
-        
+        // Cancel expired appointments before fetching
+        await cancelExpiredAppointments();
         const result = await getAppointments(userId, 'user', appointment);
-        
         if (result.success) {
             res.json(result);
         } else {
@@ -111,9 +115,9 @@ export const getConsultantAppointments = async(req, res) => {
     try {
         const { consultantId } = req.params;
         const appointment = req.query;
-        
+        // Cancel expired appointments before fetching
+        await cancelExpiredAppointments();
         const result = await getAppointments(consultantId, 'consultant', appointment);
-        
         if (result.success) {
             res.json(result);
         } else {

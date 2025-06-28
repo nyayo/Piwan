@@ -8,13 +8,21 @@ import { useAuth } from '../context/authContext';
 const config = createTamagui(defaultConfig)
 
 export default function App() {
-    const {loading, isAuthenticated} = useAuth();
-    console.log(isAuthenticated)
+    const {loading, isAuthenticated, user} = useAuth();
+    
+    if (loading) {
+        return (
+            <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
+                <Text>Loading...</Text>
+            </View>
+        );
+    }
+    
     return (
         <>
-            {/* <Redirect href={'/(screens)/profileUpdate'} /> */}
-            {
-                isAuthenticated ? <Redirect href={'/(tabs)'} /> : <Redirect href={'/(auth)/login'} />
+            {isAuthenticated ? 
+                <Redirect href={user?.role === 'consultant' ? '/(consultants)/' : '/(users)/'} /> : 
+                <Redirect href={'/(auth)/login'} />
             }
         </>
     );

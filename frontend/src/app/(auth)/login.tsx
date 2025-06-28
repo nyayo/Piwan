@@ -39,7 +39,12 @@ const LoginScreen = () => {
             console.log(response)
             
             if (response.success) {
-                router.replace("/(tabs)");
+                // Redirect based on role
+                if (response.user && response.user.role === 'consultant') {
+                    router.replace("/(consultants)");
+                } else {
+                    router.replace("/(users)");
+                }
             } else {
                 Alert.alert('Login Failed', response.message);
             }

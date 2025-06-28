@@ -25,13 +25,17 @@ export const AuthProvider = ({ children }) => {
         try {
             const token = await getStoredToken();
             const userData = await getStoredUserData();
-
-        if (token && userData) {
-            setUser(userData);
-            setIsAuthenticated(true);
-        }
+            if (token && userData) {
+                setUser(userData);
+                setIsAuthenticated(true);
+            } else {
+                setUser(null);
+                setIsAuthenticated(false);
+            }
         } catch (error) {
             console.log('Auth check failed:', error);
+            setUser(null);
+            setIsAuthenticated(false);
         } finally {
             setLoading(false);
         }
@@ -40,7 +44,6 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const response = await loginUser(email, password);
-            
             if (response.success) {
                 setUser(response.user);
                 setIsAuthenticated(true);
@@ -56,7 +59,6 @@ export const AuthProvider = ({ children }) => {
     const register = async(username, email, password) => {
         try {
             const response = await registerUser(username, email, password);
-
             if (response.success) {
                 setUser(response.user);
                 setIsAuthenticated(true);
@@ -67,14 +69,23 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             return { success: false, message: error.message };
         }
-    }
+    };
+
+    const logout = async () => {
+        await logoutUser();
+        setUser(null);
+        setIsAuthenticated(false);
+    };
+
     const value = {
         user,
         isAuthenticated,
         loading,
         setLoading,
         login,
-        register
+        register,
+        logout,
+        setUser
     };
     return (
         <AuthContext.Provider value={value}>

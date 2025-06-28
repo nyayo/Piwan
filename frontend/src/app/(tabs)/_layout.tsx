@@ -25,7 +25,7 @@ export default function TabsLayout() {
                         Home
                     </Text>
                     ), 
-                tabBarIcon: ({ color, focused }) => <Ionicons style={{backgroundColor: COLORS.background}} name={focused ? "home" : "home-outline"} size={26} color={color} />}} 
+                tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? "home" : "home-outline"} size={26} color={color} />}} 
             />
             <Tabs.Screen 
             name="schedule" 

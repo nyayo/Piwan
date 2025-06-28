@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, Image, useWindowDimensions, TouchableOpacity, Linking, Alert, FlatList, Modal, Dimensions, ActivityIndicator } from 'react-native';
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -19,6 +19,8 @@ import CustomModal from '../../components/CustomModal';
 import { data, DataType } from '../../data/card-data';
 import { useUser } from '../../context/userContext';
 import { useAuth } from '../../context/authContext';
+import { getRecentActivities } from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -27,17 +29,55 @@ export enum CustomTab {
   CommunityFeed
 }
 
+type BackendActivity = {
+  id: number;
+  type: string;
+  description: string;
+  created_at: string;
+};
+
+const activityTypeToImage: Record<string, any> = {
+  login: require('../../assets/icons/login.png'),
+  appointment_create: require('../../assets/icons/appointment.png'),
+  profile_update: require('../../assets/icons/profile.png'),
+  event_create: require('../../assets/icons/event.png'),
+  review_create: require('../../assets/icons/review.png'),
+  // Add more as needed
+  default: require('../../assets/icons/default.png'),
+};
+
+const UPCOMING_EVENTS_KEY = 'upcomingEvents';
+
+const saveUpcomingEvents = async (events: DataType[]) => {
+  try {
+    await AsyncStorage.setItem(UPCOMING_EVENTS_KEY, JSON.stringify(events));
+  } catch (e) {
+    // handle error
+  }
+};
+
+const loadUpcomingEvents = async (): Promise<DataType[]> => {
+  try {
+    const json = await AsyncStorage.getItem(UPCOMING_EVENTS_KEY);
+    return json ? JSON.parse(json) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
 const Index = () => {
   const { width } = useWindowDimensions();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const animatedValue = useSharedValue(0);
+  const flatListRef = useRef<FlatList<DataType>>(null);
   const [selectedMood, setSelectedMood] = useState('');
   const [selectedTab, setSelectedTab] = useState(CustomTab.QuickActions);
   const [showEventModal, setShowEventModal] = useState<boolean>(false);
   const [upcomingEvents, setUpcomingEvents] = useState<DataType[]>([]);
+  const [recentActivities, setRecentActivities] = useState<BackendActivity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
   const navigation = useNavigation();
   const { loading, profile, isAuthenticated } = useUser();
-  const { user } = useUser();
+  const { user } = useAuth();
   console.log(isAuthenticated)
 
   const activities = useMemo(() => activities_data, []);
@@ -47,6 +87,47 @@ const Index = () => {
       profile();
     }
   }, [user, loading, profile, isAuthenticated]);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const data = await getRecentActivities();
+        setRecentActivities(data);
+      } catch (e) {
+        setRecentActivities([]);
+      } finally {
+        setActivitiesLoading(false);
+      }
+    };
+    if (user) fetchActivities();
+  }, [user]);
+
+  // Load upcoming events from AsyncStorage on mount
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const events = await loadUpcomingEvents();
+      setUpcomingEvents(events);
+    };
+    fetchEvents();
+  }, []);
+
+  // Save upcoming events to AsyncStorage whenever they change
+  useEffect(() => {
+    saveUpcomingEvents(upcomingEvents);
+  }, [upcomingEvents]);
+
+  // Auto-scroll carousel
+  useEffect(() => {
+    if (upcomingEvents.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => {
+        const nextIndex = prev + 1 >= upcomingEvents.length ? 0 : prev + 1;
+        flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+        return nextIndex;
+      });
+    }, 6000); // Change 3000 to your desired interval in ms
+    return () => clearInterval(interval);
+  }, [upcomingEvents.length]);
 
   if (loading) {
     return (
@@ -68,7 +149,7 @@ const Index = () => {
             <Image
               style={styles.profileImg}
               source={{
-                uri: user.profile_image,
+                uri: user?.profile_image || undefined,
               }}
             />
             <View style={styles.profileInfo}>
@@ -121,6 +202,7 @@ const Index = () => {
               <EmptyEventsCarousel /> 
             ) : (
               <FlatList
+                ref={flatListRef}
                 data={upcomingEvents}
                 renderItem={({ item, index }) => <CarouselItem item={item} index={index} setUpcomingEvents={setUpcomingEvents} />}
                 keyExtractor={(item) => item.id.toString()}
@@ -129,8 +211,10 @@ const Index = () => {
                 snapToInterval={screenWidth}
                 decelerationRate={"fast"}
                 snapToAlignment={"center"}
-                // contentContainerStyle={styles.carouselContainer}
-                // ItemSeparatorComponent={() => <View style={{ width: 1 }} />}
+                onMomentumScrollEnd={e => {
+                  const newIndex = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+                  setCurrentIndex(newIndex);
+                }}
               />
             )}
           </View>
@@ -140,11 +224,26 @@ const Index = () => {
             <View style={styles.activityHeader}>
               <Text style={styles.activityTitle}>Recent Activities</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.activityScroll}>
-              {activities.map((activity, index) => (
-                <Activities key={index} activity={activity} index={index} /> 
-              ))}
-            </ScrollView>
+            {activitiesLoading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : recentActivities.length === 0 ? (
+              <Text style={{ color: COLORS.textSecondary }}>No recent activities.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.activityScroll}>
+                {recentActivities.map((activity, index) => (
+                  <Activities
+                    key={activity.id || index}
+                    activity={{
+                      // Map backend activity to Activities component props
+                      type: activity.type,
+                      timestamp: new Date(activity.created_at).toLocaleString(),
+                      image: activityTypeToImage[activity.type] || activityTypeToImage.default,
+                    }}
+                    index={index}
+                  />
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           {/* Modern Tabbed Section */}

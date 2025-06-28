@@ -1,5 +1,38 @@
 import { pool } from "../config/db.js";
 
+// Cancel all expired appointments (pending/confirmed) whose start time is more than 15 minutes in the past (UTC)
+export const cancelExpiredAppointments = async () => {
+    try {
+        // Get all pending/confirmed appointments
+        const [appointments] = await pool.query(
+            `SELECT id, appointment_datetime FROM appointments 
+             WHERE status IN ('pending', 'confirmed')`
+        );
+        const now = new Date();
+        const expiredIds = [];
+        for (const appt of appointments) {
+            const apptStart = new Date(appt.appointment_datetime);
+            if (!isNaN(apptStart.getTime())) {
+                // Cancel if now > appointment start + 15 min
+                if (now > new Date(apptStart.getTime() + 15 * 60000)) {
+                    expiredIds.push(appt.id);
+                }
+            }
+        }
+        if (expiredIds.length > 0) {
+            await pool.query(
+                `UPDATE appointments SET status = 'cancelled', cancellation_reason = 'Missed/Expired', updated_at = CURRENT_TIMESTAMP WHERE id IN (?)`,
+                [expiredIds]
+            );
+            console.log('Cancelled appointment IDs:', expiredIds);
+        }
+        return { success: true, cancelled: expiredIds.length };
+    } catch (error) {
+        console.error('Error cancelling expired appointments:', error);
+        return { success: false, message: "Internal server error" };
+    }
+};
+
 export const createAppointment = async(appointment, user_id) => {
     try {
         const [consultants] = await pool.query('SELECT * FROM consultants WHERE id = ?', [appointment.consultant_id]);
@@ -8,45 +41,46 @@ export const createAppointment = async(appointment, user_id) => {
         }
 
         const durationInMinutes = appointment.duration_minutes || 90;
+        // appointment.appointment_datetime should be an ISO string in UTC
+        const appointmentDateTime = new Date(appointment.appointment_datetime);
+        if (isNaN(appointmentDateTime.getTime())) {
+            return {success: false, message: "Invalid appointment_datetime"};
+        }
+        // Use full ISO string (UTC) for MySQL DATETIME fields
+        const appointmentDateTimeStr = appointmentDateTime.toISOString();
 
-        // Create proper datetime object from date and time
-        const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
-        const appointmentEnd = new Date(appointmentDateTime);
-        appointmentEnd.setMinutes(appointmentEnd.getMinutes() + durationInMinutes);
-
-        const [conflicts] = await pool.query(`
-            SELECT id FROM appointments 
+        // Conflict check
+        const [conflicts] = await pool.query(
+            `SELECT id FROM appointments 
             WHERE consultant_id = ? 
             AND status IN ('pending', 'confirmed') 
             AND (
-                (CONCAT(appointment_date, ' ', appointment_time) <= ? AND 
-                DATE_ADD(CONCAT(appointment_date, ' ', appointment_time), INTERVAL duration_minutes MINUTE) > ?) OR
-                (CONCAT(appointment_date, ' ', appointment_time) < ? AND 
-                DATE_ADD(CONCAT(appointment_date, ' ', appointment_time), INTERVAL duration_minutes MINUTE) >= ?)
-            )
-            `, [
-                appointment.consultant_id, 
-                appointmentDateTime.toISOString().slice(0, 19).replace('T', ' '), 
-                appointmentDateTime.toISOString().slice(0, 19).replace('T', ' '), 
-                appointmentEnd.toISOString().slice(0, 19).replace('T', ' '), 
-                appointmentEnd.toISOString().slice(0, 19).replace('T', ' ')
-            ]);
+                (appointment_datetime <= ? AND DATE_ADD(appointment_datetime, INTERVAL duration_minutes MINUTE) > ?)
+                OR
+                (appointment_datetime < ? AND DATE_ADD(appointment_datetime, INTERVAL duration_minutes MINUTE) >= ?)
+            )`,
+            [
+                appointment.consultant_id,
+                appointmentDateTimeStr,
+                appointmentDateTimeStr,
+                appointmentDateTimeStr,
+                appointmentDateTimeStr
+            ]
+        );
 
         if (conflicts.length > 0) {
             return {success: false, message: "Time slot is already booked"};
         }
 
         const [result] = await pool.query(
-            `INSERT INTO appointments (user_id, consultant_id, title, description, appointment_date, appointment_time, 
-            duration_minutes, status, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+            `INSERT INTO appointments (user_id, consultant_id, title, description, appointment_datetime, duration_minutes, status, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
             [
                 user_id, 
                 appointment.consultant_id, 
                 appointment.title, 
                 appointment.description || null, 
-                appointment.appointment_date, 
-                appointment.appointment_time, 
+                appointmentDateTimeStr, 
                 durationInMinutes
             ]
         );
@@ -59,7 +93,8 @@ export const createAppointment = async(appointment, user_id) => {
                 ...appointment,
                 user_id,
                 status: 'pending',
-                duration_minutes: durationInMinutes
+                duration_minutes: durationInMinutes,
+                appointment_datetime: appointmentDateTimeStr
             }
         }
 
@@ -74,13 +109,16 @@ export const createAppointment = async(appointment, user_id) => {
 
 export const getAppointments = async(userId, userType, appointment = {}) => {
     try {
+        // Cancel expired appointments before fetching
+        await cancelExpiredAppointments();
+
         let query, params, countQuery, countParams;
 
         // Base query construction
         if (userType === 'user') {
             query = `
                 SELECT a.*, CONCAT(c.first_name, ' ', c.last_name) as consultant_name, 
-                c.profession, c.phone as consultant_phone, c.profile_image
+                c.profession, c.phone as consultant_phone, c.profile_image, c.dob
                 FROM appointments a
                 JOIN consultants c ON a.consultant_id = c.id
                 WHERE a.user_id = ?
@@ -97,7 +135,7 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
             countParams = [userId];
         } else {
             query = `
-                SELECT a.*, u.username as user_name, u.email as user_email, u.phone as user_phone
+                SELECT a.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email, u.phone as user_phone, u.profile_image, u.dob
                 FROM appointments a
                 JOIN users u ON a.user_id = u.id
                 WHERE a.consultant_id = ?
@@ -128,21 +166,29 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
         }
 
         if (appointment.date_from) {
-            query += ' AND a.appointment_date >= ?';
-            countQuery += ' AND a.appointment_date >= ?';
+            query += ' AND a.appointment_datetime >= ?';
+            countQuery += ' AND a.appointment_datetime >= ?';
             params.push(appointment.date_from);
             countParams.push(appointment.date_from);
         }
 
         if (appointment.date_to) {
-            query += ' AND a.appointment_date <= ?';
-            countQuery += ' AND a.appointment_date <= ?';
+            query += ' AND a.appointment_datetime <= ?';
+            countQuery += ' AND a.appointment_datetime <= ?';
             params.push(appointment.date_to);
             countParams.push(appointment.date_to);
         }
 
+        // Add date filter for exact day if provided
+        if (appointment.date) {
+            query += ' AND DATE(a.appointment_datetime) = ?';
+            countQuery += ' AND DATE(a.appointment_datetime) = ?';
+            params.push(appointment.date);
+            countParams.push(appointment.date);
+        }
+
         // Add ordering
-        query += ' ORDER BY a.appointment_date DESC';
+        query += ' ORDER BY a.appointment_datetime DESC';
 
         // Add pagination
         const page = parseInt(appointment.page) || 1;
@@ -194,12 +240,12 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
 export const getConsultantAvailability = async (consultantId, dateFrom, dateTo) => {
     try {
         const query = `
-            SELECT appointment_date, status
+            SELECT appointment_datetime, status
             FROM appointments 
             WHERE consultant_id = ? 
-            AND appointment_date BETWEEN ? AND ?
+            AND appointment_datetime BETWEEN ? AND ?
             AND status IN ('confirmed', 'pending')
-            ORDER BY appointment_date ASC, appointment_time ASC
+            ORDER BY appointment_datetime ASC
         `;
         
         const [appointments] = await pool.query(query, [consultantId, dateFrom, dateTo]);

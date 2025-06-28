@@ -1,5 +1,16 @@
 import { pool } from "../config/db.js";
 
+const activitiesQuery = `
+    CREATE TABLE IF NOT EXISTS activities (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        role ENUM('user', 'consultant', 'admin') NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        description TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+`
+
 const eventQuery = `
             CREATE TABLE IF NOT EXISTS events (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -132,6 +143,7 @@ const createAllTables = async() => {
         await createTable('Appointments', appointmentsQuery);
         await createTable('Reviews', reviewQuery);
         await createTable('Events', eventQuery);
+        await createTable('Activities', activitiesQuery);
         console.log('All tables created successfully.')
     } catch (error) {
         console.log('Error during table creation: ', error)

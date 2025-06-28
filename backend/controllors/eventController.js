@@ -1,5 +1,6 @@
 import { createEvent, deleteEvent, getDetail, getEvents, updateEvent } from "../services/EventServices.js"
 import { validationResult } from "express-validator"
+import { logActivity } from "../routes/activityRoutes.js";
 
 export const create = async(req, res) => {
     const { title, description, event_date, location, organizer } = req.body;
@@ -21,6 +22,8 @@ export const create = async(req, res) => {
     try {
         const response = await createEvent(eventData);
         if(response.success){
+            // Log activity for event creation
+            await logActivity(req.user.id, req.user.role, 'event_create', `Created event: ${title}`);
             return res.status(200).json(response);
         }else {
             return res.status(400).json(response);

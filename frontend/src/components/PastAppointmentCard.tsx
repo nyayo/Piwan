@@ -1,8 +1,6 @@
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native'
 import React from 'react'
-import COLORS from '../constants/theme';
-import { formatTime, convertToLocalDate } from '../helper/convertDateTime';
-import { PastType } from '../data/past';
+import { formatTime, convertToLocalDate, toLocalDateTimeString } from '../helper/convertDateTime';
 
 type CarouselCardProps = {
     appointment: PastType;
@@ -15,7 +13,10 @@ const CarouselCard = ({ appointment }: CarouselCardProps) => {
             <View style={styles.pastDoctorInfo}>
             <Text style={styles.pastDoctorName}>{appointment.consultant_name}</Text>
             <Text style={styles.pastAppointmentDetails}>
-                {appointment.profession} — {convertToLocalDate(appointment.appointment_date)} • {formatTime(appointment.appointment_time)}
+                {appointment.profession} — {convertToLocalDate(appointment.appointment_datetime)} • {formatTime(appointment.appointment_datetime)}
+            </Text>
+            <Text style={styles.dateText}>
+                {toLocalDateTimeString(appointment.appointment_datetime)}
             </Text>
             </View>
             <View style={styles.pastPriceContainer}>
@@ -24,6 +25,13 @@ const CarouselCard = ({ appointment }: CarouselCardProps) => {
         </View>
         );
 }
+
+const COLORS = {
+  ...require('../constants/theme').default,
+  textLight: '#b0b0b0',
+  shadow: 'rgba(0,0,0,0.1)',
+  lightGrey: '#f1f1f1',
+};
 
 const styles = StyleSheet.create({
     pastCard: {
@@ -58,6 +66,10 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.grey,
     },
+    dateText: {
+        fontSize: 14,
+        color: COLORS.grey,
+    },
     pastPriceContainer: {
         backgroundColor: COLORS.textDark,
         borderRadius: 12,
@@ -72,3 +84,14 @@ const styles = StyleSheet.create({
 })
 
 export default CarouselCard;
+
+// Fix PastType to include all used fields
+export type PastType = {
+    id: number;
+    appointment_datetime: string;
+    consultant_name: string;
+    profile_image: string;
+    profession: string;
+    status: string;
+    [key: string]: any;
+};

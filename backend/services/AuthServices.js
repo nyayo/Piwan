@@ -13,15 +13,9 @@ export const registerUser = async(user) => {
         const userId = result.insertId;
         const role = 'user';
         
-        const token = jwt.sign(
-            { id: userId, email: user.email, role }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '1h' }
-        );
         const response = {
             success: true, 
             message: 'User Registered Successfully.',
-            token,
             user: {
                 id: userId,
                 email: user.email,
@@ -32,10 +26,6 @@ export const registerUser = async(user) => {
         return response;
         
     } catch (error) {
-        if (error.name === 'JsonWebTokenError') {
-            return { success: false, message: 'Token creation failed' };
-        }
-        
         if (error.code === 'ER_DUP_ENTRY') {
             return { success: false, message: 'Email already exists' };
         }
@@ -94,23 +84,29 @@ export const loginUser = async(email, password) => {
             return {success: false, message: "Invalid credentials."};
         }
 
-
-        const token = jwt.sign({ id: user.id, email: user.email, role }, process.env.JWT_SECRET, {expiresIn: '1h'});
-
         return {
             success: true,
             message: 'Login Successful',  
-            token,
-            user: {
-                id: user.id,
-                email: user.email,
-                username: user.username,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                role
-            }
+            user
         };
     } catch (error) {
         return {success: false, message: "Login failed. Please try again later."};
     }
 }
+
+// Store refresh token in DB
+export const storeRefreshToken = async (userId, refreshToken) => {
+    // Create table if not exists: CREATE TABLE refresh_tokens (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, token VARCHAR(512), created_at DATETIME DEFAULT CURRENT_TIMESTAMP)
+    await pool.query('INSERT INTO refresh_tokens (user_id, token) VALUES (?, ?)', [userId, refreshToken]);
+};
+
+// Remove refresh token from DB (logout/revoke)
+export const revokeRefreshToken = async (refreshToken) => {
+    await pool.query('DELETE FROM refresh_tokens WHERE token = ?', [refreshToken]);
+};
+
+// Find refresh token in DB
+export const findRefreshToken = async (refreshToken) => {
+    const [rows] = await pool.query('SELECT * FROM refresh_tokens WHERE token = ?', [refreshToken]);
+    return rows.length > 0;
+};

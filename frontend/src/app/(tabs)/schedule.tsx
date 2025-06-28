@@ -13,7 +13,8 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
@@ -23,7 +24,7 @@ import PastAppointmentCard from '../../components/PastAppointmentCard';
 import FeedbackBanner from '../../components/FeedbackBanner';
 import CarouselIndicator from '../../components/CarouselIndicator';
 import { useAuth } from '../../context/authContext';
-import { cancelExpiredAppointments } from '../../helper/autoCancellationOfExpired';
+import { AuthContextType } from '../../context/authContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -51,17 +52,39 @@ const COLORS = {
   shadow: "rgba(0, 0, 0, 0.1)"
 };
 
+// Define AuthContextType locally if not exported
+interface AuthContextType {
+  user: {
+    id: number;
+    [key: string]: any;
+  } | null;
+}
+
+// Extend Appointment type to include required fields for cards
+interface Appointment {
+  id: number;
+  appointment_datetime: string;
+  status: string;
+  consultant_name?: string;
+  profile_image?: string;
+  profession?: string;
+  location?: string;
+  cancellation_reason?: string;
+  notes?: string;
+  [key: string]: any;
+}
+
 export default function AppointmentsScreen() {
-  const {user} = useAuth();
+  const { user } = useAuth() as AuthContextType;
   const navigation = useNavigation();
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
-  const [appointments, setAppointments] = useState([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Pagination states for past appointments
-  const [pastAppointments, setPastAppointments] = useState([]);
+  const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
   const [pastAppointmentsPage, setPastAppointmentsPage] = useState(1);
   const [pastAppointmentsLoading, setPastAppointmentsLoading] = useState(false);
   const [hasMorePastAppointments, setHasMorePastAppointments] = useState(true);
@@ -75,14 +98,13 @@ export default function AppointmentsScreen() {
 
   // Separate appointments into upcoming only (past will be handled separately)
   const upcomingAppointments = appointments.filter(apt => {
-    const appointmentDate = new Date(apt.appointment_date);
+    const appointmentDate = new Date(apt.appointment_datetime);
     const now = new Date();
     return appointmentDate >= now || apt.status === "pending" || apt.status === "confirmed";
   });
 
   const fetchPastAppointments = useCallback(async (page = 1, isRefresh = false) => {
     if (!userId) return;
-    
     try {
       console.log(`Fetching past appointments - Page: ${page}, Refresh: ${isRefresh}`);
       
@@ -105,23 +127,19 @@ export default function AppointmentsScreen() {
       console.log('Fetching past appointments with filters:', pastFilters);
 
       const pastResult = await getUserAppointments(userId, pastFilters);
-
       if (pastResult.success) {
-        const newPastAppointments = pastResult.appointments || [];
+        const newPastAppointments: Appointment[] = pastResult.appointments || [];
         
         console.log(`Received ${newPastAppointments.length} past appointments for page ${page}`);
         console.log('Total from API:', pastResult.total);
         
         if (page === 1 || isRefresh) {
-          // Replace all past appointments
           setPastAppointments(newPastAppointments);
           setPastAppointmentsPage(1);
         } else {
-          // Append to existing past appointments
           setPastAppointments(prev => {
-            // Prevent duplicates by checking IDs
-            const existingIds = new Set(prev.map(apt => apt.id));
-            const uniqueNew = newPastAppointments.filter(apt => !existingIds.has(apt.id));
+            const existingIds = new Set(prev.map((apt: Appointment) => apt.id));
+            const uniqueNew = newPastAppointments.filter((apt: Appointment) => !existingIds.has(apt.id));
             return [...prev, ...uniqueNew];
           });
           setPastAppointmentsPage(page);
@@ -144,8 +162,10 @@ export default function AppointmentsScreen() {
       }
     } catch (err) {
       console.error('Error fetching past appointments:', err);
+      let errorMsg = 'Failed to fetch past appointments';
+      if (err instanceof Error) errorMsg = err.message;
       if (page === 1) {
-        setError(err.message || 'Failed to fetch past appointments');
+        setError(errorMsg);
       }
     } finally {
       setPastAppointmentsLoading(false);
@@ -154,7 +174,6 @@ export default function AppointmentsScreen() {
 
   const fetchAppointments = useCallback(async (showRefreshIndicator = false) => {
     if (!userId) return;
-    
     try {
       console.log(`Fetching appointments - Refresh: ${showRefreshIndicator}`);
       
@@ -172,7 +191,6 @@ export default function AppointmentsScreen() {
       };
       
       const upcomingResult = await getUserAppointments(userId, upcomingFilters);
-      
       if (upcomingResult.success) {
         setAppointments(upcomingResult.appointments || []);
       } else {
@@ -194,7 +212,9 @@ export default function AppointmentsScreen() {
       }
 
     } catch (err) {
-      setError(err.message || 'Failed to fetch appointments');
+      let errorMsg = 'Failed to fetch appointments';
+      if (err instanceof Error) errorMsg = err.message;
+      setError(errorMsg);
       console.error('Error fetching appointments:', err);
     } finally {
       setLoading(false);
@@ -213,12 +233,11 @@ export default function AppointmentsScreen() {
   useEffect(() => {
     if (userId && !initialLoadComplete) {
       console.log('Initial data load for user:', userId);
-      cancelExpiredAppointments(userId);
       fetchAppointments(false);
     }
   }, [userId, initialLoadComplete, fetchAppointments]);
 
-  const handleCancelPress = async (appointment, reason) => {
+  const handleCancelPress = async (appointment: Appointment, reason: string) => {
     try {
       Alert.alert(
         "Cancel Appointment",
@@ -257,19 +276,19 @@ export default function AppointmentsScreen() {
                 }
               } catch (error) {
                 console.error('Error cancelling appointment:', error);
-                
                 let errorMessage = "Failed to cancel appointment. Please try again.";
-                
-                if (error.response?.status === 400) {
-                  errorMessage = error.response.data.message || "Bad request. Please check your input.";
-                } else if (error.response?.status === 401) {
-                  errorMessage = "You are not authorized to cancel this appointment.";
-                } else if (error.response?.status === 404) {
-                  errorMessage = "Appointment not found.";
-                } else if (error.response?.status >= 500) {
-                  errorMessage = "Server error. Please try again later.";
+                if (typeof error === 'object' && error !== null && 'response' in error) {
+                  const errObj = error as any;
+                  if (errObj.response?.status === 400) {
+                    errorMessage = errObj.response.data.message || "Bad request. Please check your input.";
+                  } else if (errObj.response?.status === 401) {
+                    errorMessage = "You are not authorized to cancel this appointment.";
+                  } else if (errObj.response?.status === 404) {
+                    errorMessage = "Appointment not found.";
+                  } else if (errObj.response?.status >= 500) {
+                    errorMessage = "Server error. Please try again later.";
+                  }
                 }
-                
                 Alert.alert(
                   "Error", 
                   errorMessage,
@@ -290,11 +309,11 @@ export default function AppointmentsScreen() {
     }
   };
 
-  const handleChat = (appointment) => {
+  const handleChat = (appointment: Appointment) => {
     console.log('Starting chat with:', appointment.consultant_name);
   };
 
-  const handleScroll = (event) => {
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const slideIndex = Math.round(event.nativeEvent.contentOffset.x / (screenWidth - 40));
     setCurrentCarouselIndex(slideIndex);
   };
@@ -320,7 +339,82 @@ export default function AppointmentsScreen() {
     );
   };
 
-  const renderEmptyState = (type) => (
+  // Modal state for past appointment details
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPastAppointment, setSelectedPastAppointment] = useState<Appointment | null>(null);
+
+  // Handler to open modal with appointment details
+  const handlePastAppointmentPress = (appointment: Appointment) => {
+    setSelectedPastAppointment(appointment);
+    setModalVisible(true);
+  };
+
+  // Modal content for appointment details
+  const renderAppointmentModal = () => (
+    <Modal
+      visible={modalVisible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+        <View style={{
+          backgroundColor: COLORS.white,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          paddingHorizontal: 24,
+          paddingTop: 24,
+          paddingBottom: 32,
+          width: '100%',
+          minHeight: '60%',
+          maxHeight: '80%',
+          elevation: 8,
+          shadowColor: COLORS.shadow,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.2,
+          shadowRadius: 12,
+          alignSelf: 'center',
+        }}>
+          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ width: 40, height: 5, borderRadius: 3, backgroundColor: COLORS.lightGrey, marginBottom: 12 }} />
+            <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textDark }}>Appointment Details</Text>
+          </View>
+          {selectedPastAppointment && (
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+              <Text style={{ fontSize: 16, color: COLORS.textPrimary, marginBottom: 8 }}>
+                Consultant: {selectedPastAppointment.consultant_name || 'N/A'}
+              </Text>
+              <Text style={{ fontSize: 16, color: COLORS.textPrimary, marginBottom: 8 }}>
+                Date: {selectedPastAppointment.appointment_datetime ? new Date(selectedPastAppointment.appointment_datetime).toLocaleString() : 'N/A'}
+              </Text>
+              <Text style={{ fontSize: 16, color: COLORS.textPrimary, marginBottom: 8 }}>
+                Status: {selectedPastAppointment.status}
+              </Text>
+              {selectedPastAppointment.cancellation_reason && (
+                <Text style={{ fontSize: 16, color: COLORS.error, marginBottom: 8 }}>
+                  Cancellation Reason: {selectedPastAppointment.cancellation_reason}
+                </Text>
+              )}
+              {selectedPastAppointment.notes && (
+                <Text style={{ fontSize: 16, color: COLORS.textSecondary, marginBottom: 8 }}>
+                  Notes: {selectedPastAppointment.notes}
+                </Text>
+              )}
+              {/* Add more fields as needed */}
+            </ScrollView>
+          )}
+          <TouchableOpacity
+            style={{ marginTop: 24, alignSelf: 'center', backgroundColor: COLORS.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 10 }}
+            onPress={() => setModalVisible(false)}
+          >
+            <Text style={{ color: COLORS.white, fontWeight: '600', fontSize: 16 }}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderEmptyState = (type: 'upcoming' | 'past') => (
     <View style={styles.emptyState}>
       <Ionicons 
         name={type === 'upcoming' ? 'calendar-outline' : 'time-outline'} 
@@ -460,7 +554,13 @@ export default function AppointmentsScreen() {
                 {upcomingAppointments.map((appointment) => (
                   <CarouselCard
                     key={appointment.id}
-                    appointment={appointment}
+                    appointment={{
+                      ...appointment,
+                      consultant_name: appointment.consultant_name || '',
+                      profile_image: appointment.profile_image || '',
+                      profession: appointment.profession || '',
+                      location: appointment.location || '',
+                    }}
                     onCancelPress={handleCancelPress}
                     onChatPress={handleChat}
                   />
@@ -487,19 +587,19 @@ export default function AppointmentsScreen() {
               </Text>
             )}
           </View>
-          
           {pastAppointments.length > 0 ? (
             <>
               {pastAppointments.map((appointment) => (
-                <PastAppointmentCard
-                  key={appointment.id}
-                  appointment={appointment}
-                />
+                <TouchableOpacity key={appointment.id} onPress={() => handlePastAppointmentPress(appointment)} activeOpacity={0.7}>
+                  <PastAppointmentCard appointment={{
+                    ...appointment,
+                    consultant_name: appointment.consultant_name || '',
+                    profile_image: appointment.profile_image || '',
+                    profession: appointment.profession || '',
+                  }} />
+                </TouchableOpacity>
               ))}
-              
               {renderLoadMoreButton()}
-              
-              {/* Show feedback banner only when we've loaded some past appointments */}
               {pastAppointments.length > 0 && (
                 <FeedbackBanner />
               )}
@@ -509,7 +609,6 @@ export default function AppointmentsScreen() {
           )}
         </View>
       </ScrollView>
-
       {/* Floating Action Button */}
       <TouchableOpacity 
         style={styles.floatingActionButton}
@@ -518,6 +617,8 @@ export default function AppointmentsScreen() {
       >
         <Ionicons style={{ fontWeight: "100"}} name="add" size={28} color={COLORS.white} />
       </TouchableOpacity>
+      {/* Appointment Details Modal */}
+      {renderAppointmentModal()}
     </SafeAreaView>
   );
 }

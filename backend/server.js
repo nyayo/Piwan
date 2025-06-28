@@ -5,6 +5,8 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
+import activityRoutes from './routes/activityRoutes.js';
+import cloudinarySignatureRouter from './routes/cloudinarySignature.js';
 import cors from 'cors';
 
 const app = express();
@@ -15,6 +17,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/activities', activityRoutes);
+app.use('/api', cloudinarySignatureRouter);
 
 app.listen(3000, async() => {
     console.log('Server running at port 3000.')

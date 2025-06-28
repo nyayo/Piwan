@@ -1,5 +1,7 @@
-import {registerUser, loginUser, registerConsultant} from '../services/AuthServices.js';
+import {registerUser, loginUser, registerConsultant, storeRefreshToken, revokeRefreshToken, findRefreshToken} from '../services/AuthServices.js';
 import { pool } from "../config/db.js";
+import { logActivity } from "../routes/activityRoutes.js";
+import jwt from 'jsonwebtoken';
 
 export const register = async(req, res) => {
     const {username, email, password} = req.body;  
@@ -21,6 +23,8 @@ export const register = async(req, res) => {
     try {
         const response = await registerUser(user);
         if(response.success){
+            // Log activity for user registration
+            await logActivity(response.user.id, 'user', 'register', 'User registered');
             return res.status(201).json(response); 
         }else {
             return res.status(400).json(response);
@@ -47,6 +51,8 @@ export const consultant = async(req, res) => {
     try {
         const response = await registerConsultant(user);
         if(response.success){
+            // Log activity for consultant registration
+            await logActivity(response.user.id, 'consultant', 'register', 'Consultant registered');
             return res.status(200).json(response); 
         }else {
             return res.status(400).json(response);
@@ -66,12 +72,66 @@ export const login = async(req, res) => {
     try {
         const response = await loginUser(email, password);
         if(response.success){
-            return res.status(200).json(response); 
+            // Issue access and refresh tokens
+            const accessToken = jwt.sign(
+                { id: response.user.id, email: response.user.email, role: response.user.role },
+                process.env.JWT_SECRET,
+                { expiresIn: '15m' }
+            );
+            const refreshToken = jwt.sign(
+                { id: response.user.id, email: response.user.email, role: response.user.role },
+                process.env.JWT_REFRESH_SECRET,
+                { expiresIn: '7d' }
+            );
+            // Store refresh token in DB
+            await storeRefreshToken(response.user.id, refreshToken);
+            // Log activity for login
+            await logActivity(response.user.id, response.user.role, 'login', 'User logged in');
+            return res.status(200).json({ ...response, accessToken, refreshToken }); 
         }else {
             return res.status(400).json(response);
         }
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ success: false, message: 'Login failed. Please try again later.' });
     }
-} 
+}
+
+// Refresh token endpoint (for completeness, but main logic is in middleware/auth.js)
+export const refresh = async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+        return res.status(401).json({ success: false, message: 'Refresh token required' });
+    }
+    try {
+        // Check if refresh token exists in DB
+        const found = await findRefreshToken(refreshToken);
+        if (!found) {
+            return res.status(403).json({ success: false, message: 'Refresh token not found or revoked' });
+        }
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        const newAccessToken = jwt.sign(
+            { id: decoded.id, email: decoded.email, role: decoded.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+        res.json({ accessToken: newAccessToken });
+    } catch (err) {
+        return res.status(403).json({ success: false, message: 'Invalid or expired refresh token' });
+    }
+};
+
+// Logout endpoint to revoke refresh token
+export const logout = async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+        return res.status(400).json({ success: false, message: 'Refresh token required' });
+    }
+    try {
+        await revokeRefreshToken(refreshToken);
+        res.json({ success: true, message: 'Logged out successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Logout failed' });
+    }
+};
 

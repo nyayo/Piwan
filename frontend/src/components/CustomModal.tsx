@@ -1,9 +1,10 @@
-import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native'
+import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, Image, TextInput } from 'react-native'
 import React, { useCallback, useMemo, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import COLORS from '../constants/theme';
 import { DataType, data } from '../data/card-data';
+import truncateWords from '../helper/truncateWords';
 
 type CustomModal = {
     showEventModal: boolean;
@@ -14,7 +15,18 @@ type CustomModal = {
 
 const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpcomingEvents }:CustomModal) => {
     const [selectedEvent, setSelectedEvent] = useState<DataType | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
     const availableEvents = useMemo(() => data, []);
+
+    // Filter events by search query
+    const filteredEvents = useMemo(() => {
+        if (!searchQuery.trim()) return availableEvents;
+        const q = searchQuery.trim().toLowerCase();
+        return availableEvents.filter(event =>
+            event.title.toLowerCase().includes(q) ||
+            event.description.toLowerCase().includes(q)
+        );
+    }, [availableEvents, searchQuery]);
 
     const handleAddEvent = useCallback((event: DataType) => {
         if (!upcomingEvents.find(e => e.id === event.id)) {
@@ -55,11 +67,23 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
                     <Ionicons name="close" size={24} color={COLORS.textDark} />
                 </TouchableOpacity>
             </View>
-            
+            <View style={styles.searchContainer}>
+                <Ionicons name="search" size={18} color={COLORS.grey} style={{ marginRight: 8 }} />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search events..."
+                    placeholderTextColor={COLORS.grey}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    returnKeyType="search"
+                />
+            </View>
             <ScrollView style={styles.modalContent}>
                 <Text style={styles.modalSubtitle}>Choose events to add to your wellness routine:</Text>
-                
-                {availableEvents.map((event) => {
+                {filteredEvents.length === 0 && (
+                    <Text style={{ color: COLORS.grey, textAlign: 'center', marginTop: 24 }}>No events found.</Text>
+                )}
+                {filteredEvents.map((event) => {
                     const isAdded = isEventAdded(event);
                     return (
                         <TouchableOpacity
@@ -72,7 +96,7 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
                             </View>
                             <View style={styles.eventOptionContent}>
                                 <Text style={styles.eventOptionTitle}>{event.title}</Text>
-                                <Text style={styles.eventOptionDescription}>{event.description}</Text>
+                                <Text style={styles.eventOptionDescription}>{truncateWords({ text: event.description, maxWords: 5 })}</Text>
                             </View>
                             <View style={styles.eventOptionActions}>
                                 {isAdded && (
@@ -230,37 +254,43 @@ const styles = StyleSheet.create({
     },
     eventOption: {
         flexDirection: 'row',
-        alignItems: 'center', // Changed from 'center' to 'stretch'
-        paddingVertical: 0, // Removed vertical padding
-        paddingHorizontal: 0, // Removed horizontal padding
+        alignItems: 'center',
         marginBottom: 12,
         borderRadius: 12,
         backgroundColor: '#F9F9F9',
         borderWidth: 1,
         borderColor: COLORS.border || '#E0E0E0',
-        overflow: 'hidden', // Ensures content stays within rounded bounds
-        minHeight: 80, // Set minimum height for the container
+        overflow: 'hidden',
+        minHeight: 72,
+        height: 72,
+        padding: 0,
     },
     eventOptionAdded: {
         backgroundColor: COLORS.primaryLight || '#E6F0FA',
         borderColor: COLORS.primary,
     },
     eventOptionIcon: {
-        flex: 1, // Takes up 1/3 of the available space
+        width: 72,
+        height: 72,
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'hidden', // Ensures image stays within bounds
+        overflow: 'hidden',
+        padding: 0,
+        margin: 0,
     },
     eventImage: {
         width: '100%',
         height: '100%',
-        minHeight: 80, // Matches container minimum height
+        resizeMode: 'cover',
+        minHeight: 72,
+        minWidth: 72,
+        borderRadius: 0,
     },
     eventOptionContent: {
-        flex: 2, // Takes up 2/3 of the available space
-        paddingVertical: 16, // Add padding back to content
-        paddingHorizontal: 16,
+        flex: 1,
         justifyContent: 'center',
+        paddingVertical: 0,
+        paddingHorizontal: 16,
     },
     eventOptionTitle: {
         fontSize: 16,
@@ -351,6 +381,25 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: 'white',
         marginLeft: 8,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F1F5F9',
+        borderRadius: 8,
+        marginHorizontal: 16,
+        marginTop: 16,
+        marginBottom: 8,
+        paddingHorizontal: 12,
+        height: 40,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 16,
+        color: COLORS.textDark,
+        backgroundColor: 'transparent',
+        paddingVertical: 0,
+        paddingHorizontal: 0,
     },
 })
 

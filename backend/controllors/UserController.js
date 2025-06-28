@@ -8,11 +8,14 @@ import {
     deleteConsultant, 
     updateProfile
 } from "../services/UserServices.js";
+import { logActivity } from "../routes/activityRoutes.js";
 
 export const profile = async (req, res) => {
     try {
         const response = await getProfile(req);
         if(response.success){
+            // Log activity for profile view
+            // await logActivity(req.user.id, req.user.role, 'profile_view', 'Viewed profile');
             return res.status(200).json(response); 
         }else {
             return res.status(400).json(response);
@@ -132,6 +135,8 @@ export const prof_update = async(req, res) => {
     try {
         const response = await updateProfile(currentEmail, fieldsToUpdate, req);
         if(response.success){
+            // Log activity for profile update
+            await logActivity(req.user.id, req.user.role, 'profile_update', 'Updated profile');
             return res.status(200).json(response); 
         }else {
             return res.status(400).json(response);

@@ -16,13 +16,24 @@ import ProfileOption from '../../components/ProfileOption';
 import COLORS from '../../constants/theme';
 import { useUser } from '../../context/userContext';
 import { StatusBar } from 'expo-status-bar';
+import { useAuth } from '../../context/authContext';
+import { logoutUser } from '../../services/api';
 
 export default function ProfileScreen() {
-  const {user} = useUser();
+  const {user, setUser} = useAuth();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+
+  // Guard: show fallback UI if user is null
+  if (!user) {
+    return (
+      <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:COLORS.white}}>
+        <Text style={{color:COLORS.textDark}}>Loading...</Text>
+      </View>
+    );
+  }
 
   const handleOptionPress = (option: string) => {
     if(option === 'profile'){
@@ -57,12 +68,12 @@ export default function ProfileScreen() {
     });
   };
 
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
     closeModal();
-    setTimeout(() => {
-      console.log("User logged out");
-      // Add your logout logic here
-      // router.replace('/login');
+    setTimeout(async () => {
+      await logoutUser();
+      setUser(null);
+      router.replace('/login');
     }, 300);
   };
 
@@ -70,20 +81,20 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.profileSection}>
         <Image style={{ 
-        width: '100%', 
-        aspectRatio: 19/7
+          width: '100%', 
+          aspectRatio: 19/7
         }} 
-        source={{ uri: user.profile_image,}}
+        source={{ uri: user?.profile_image || undefined }}
         blurRadius={8}
         />
         <Image 
-        style={styles.avatar} 
-        source={{uri: user.profile_image}} 
+          style={styles.avatar} 
+          source={{uri: user?.profile_image || undefined}} 
         />
         <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{user.first_name} {user.last_name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
-          <Text style={styles.userBio}>{user.bio}</Text>
+          <Text style={styles.userName}>{user?.first_name} {user?.last_name}</Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
+          <Text style={styles.userBio}>{user?.bio}</Text>
         </View>
       </View>
 

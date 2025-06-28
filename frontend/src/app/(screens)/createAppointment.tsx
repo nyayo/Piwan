@@ -48,16 +48,16 @@ const getMonthNames = () => [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const getDaysInMonth = (year, month) => {
+const getDaysInMonth = (year: number, month: number) => {
   return new Date(year, month + 1, 0).getDate();
 };
 
-const getFirstDayOfMonth = (year, month) => {
+const getFirstDayOfMonth = (year: number, month: number) => {
   const firstDay = new Date(year, month, 1).getDay();
   return firstDay === 0 ? 6 : firstDay - 1; // Convert Sunday (0) to be 6, Monday (1) to be 0
 };
 
-const isDateInPast = (year, month, day) => {
+const isDateInPast = (year: number, month: number, day: number) => {
   const today = new Date();
   const checkDate = new Date(year, month, day);
   today.setHours(0, 0, 0, 0);
@@ -65,18 +65,18 @@ const isDateInPast = (year, month, day) => {
   return checkDate < today;
 };
 
-const isToday = (year, month, day) => {
+const isToday = (year: number, month: number, day: number) => {
   const today = new Date();
   return today.getFullYear() === year && 
         today.getMonth() === month && 
         today.getDate() === day;
 };
 
-const formatDate = (year, month, day) => {
+const formatDate = (year: number, month: number, day: number) => {
   return `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
 };
 
-const generateCalendarDays = (year, month) => {
+const generateCalendarDays = (year: number, month: number) => {
   const days = [];
   const daysInMonth = getDaysInMonth(year, month);
   const startDay = getFirstDayOfMonth(year, month);
@@ -112,6 +112,21 @@ const practitioner = {
   price: 80
 };
 
+// Types for calendar and time slot
+interface CalendarDay {
+  day: number;
+  fullDate: string;
+  date: string;
+  isPast: boolean;
+  isToday: boolean;
+  isAvailable: boolean;
+  bookedSlots: string[];
+}
+interface TimeSlot {
+  time: string;
+  isBooked?: boolean;
+}
+
 export default function AppointmentScheduleScreen() {
   const { selectedConsultant, appointmentData, updateAppointmentData, clearConsultant } = useConsultant();
   const navigation = useNavigation();
@@ -120,7 +135,7 @@ export default function AppointmentScheduleScreen() {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState<CalendarDay | null>(null);
   const [selectedTime, setSelectedTime] = useState("12:30 PM");
   const [reasonForVisit, setReasonForVisit] = useState("I have been experiencing persistent headaches for several days, and they do not improve with over-the-counter pain relievers.");
   
@@ -134,7 +149,7 @@ export default function AppointmentScheduleScreen() {
   const [bookedAppointments, setBookedAppointments] = useState([]);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [selectedTimeIndex, setSelectedTimeIndex] = useState(1);
-  const [availableDates, setAvailableDates] = useState(calendarDays);
+  const [availableDates, setAvailableDates] = useState<(CalendarDay | null)[]>(calendarDays);
 
   // Auto-update calendar every minute to handle date changes
   useEffect(() => {
@@ -190,23 +205,16 @@ export default function AppointmentScheduleScreen() {
   };
 
   // Helper function to convert 12-hour format to 24-hour format
-  const convertTo24Hour = (time12h) => {
-      const [time, modifier] = time12h.split(' ');
-      let [hours, minutes] = time.split(':');
-      
-      if (hours === '12') {
-          hours = '00';
-      }
-      
-      if (modifier === 'PM') {
-          hours = parseInt(hours, 10) + 12;
-      }
-      
-      return `${hours.toString().padStart(2, '0')}:${minutes}`;
+  const convertTo24Hour = (time12h: string): string => {
+    let [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':');
+    if (hours === '12') hours = '00';
+    if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+    return `${hours.padStart(2, '0')}:${minutes}`;
   };
 
   // Updated function to handle timezone and time format issues
-  const updateDateAvailability = (appointments) => {
+  const updateDateAvailability = (appointments: any[]): void => {
     console.log('Total appointments received:', appointments.length);
 
     const updatedDates = availableDates.map((dateInfo) => {
@@ -216,15 +224,12 @@ export default function AppointmentScheduleScreen() {
 
       const appointmentsOnDate = appointments.filter((apt) => {
         let appointmentDate;
-        if (apt.appointment_date.includes('T')) {
-          const utcDate = new Date(apt.appointment_date);
-          const year = utcDate.getFullYear();
-          const month = (utcDate.getMonth() + 1).toString().padStart(2, '0');
-          const day = utcDate.getDate().toString().padStart(2, '0');
-          appointmentDate = `${year}-${month}-${day}`;
-        } else {
-          appointmentDate = apt.appointment_date.split('T')[0];
-        }
+        const utcDate = new Date(apt.appointment_datetime);
+        const year = utcDate.getFullYear();
+        const month = (utcDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = utcDate.getDate().toString().padStart(2, '0');
+        appointmentDate = `${year}-${month}-${day}`;
+        
         return appointmentDate === dateInfo.fullDate;
       });
 
@@ -232,8 +237,11 @@ export default function AppointmentScheduleScreen() {
 
       const bookedTimesIn24Hour = appointmentsOnDate
         .map((apt) => {
-          if (!apt.appointment_time) return null;
-          return apt.appointment_time.substring(0, 5);
+          if (!apt.appointment_datetime) return null;
+          const utcDate = new Date(apt.appointment_datetime);
+          const hours = utcDate.getUTCHours().toString().padStart(2, '0');
+          const minutes = utcDate.getUTCMinutes().toString().padStart(2, '0');
+          return `${hours}:${minutes}`;
         })
         .filter((time) => time !== null);
 
@@ -262,46 +270,34 @@ export default function AppointmentScheduleScreen() {
       };
     });
 
-    setAvailableDates(updatedDates);
+    setAvailableDates(updatedDates as (CalendarDay | null)[]);
   };
 
   // Get available time slots for selected date
-  const getAvailableTimeSlots = () => {
-    const selectedDate = availableDates[selectedDateIndex];
-    if (!selectedDate) {
-      console.log('No selected date, returning default time slots');
-      return timeSlots;
-    }
-
+  const getAvailableTimeSlots = (): TimeSlot[] => {
+    const selectedDateObj = availableDates[selectedDateIndex];
+    if (!selectedDateObj) return timeSlots;
     const bookedTimes = bookedAppointments
-      .filter((apt) => {
+      .filter((apt: any) => {
         let appointmentDate;
-        if (apt.appointment_date.includes('T')) {
-          // Parse as UTC and convert to local date
-          const utcDate = new Date(apt.appointment_date);
-          const year = utcDate.getFullYear();
-          const month = (utcDate.getMonth() + 1).toString().padStart(2, '0');
-          const day = utcDate.getDate().toString().padStart(2, '0');
-          appointmentDate = `${year}-${month}-${day}`;
-        } else {
-          appointmentDate = apt.appointment_date.split('T')[0];
-        }
-        console.log(`Checking appointment date ${appointmentDate} against selected ${selectedDate.fullDate}`);
-        return appointmentDate === selectedDate.fullDate;
+        const utcDate = new Date(apt.appointment_datetime);
+        const year = utcDate.getFullYear();
+        const month = (utcDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = utcDate.getDate().toString().padStart(2, '0');
+        appointmentDate = `${year}-${month}-${day}`;
+        
+        return appointmentDate === selectedDateObj.fullDate;
       })
-      .map((apt) => {
-        const time = apt.appointment_time ? apt.appointment_time.substring(0, 5) : '';
-        console.log(`Processing appointment time: ${apt.appointment_time} -> ${time}`);
-        return time;
+      .map((apt: any) => {
+        const utcDate = new Date(apt.appointment_datetime);
+        const hours = utcDate.getUTCHours().toString().padStart(2, '0');
+        const minutes = utcDate.getUTCMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
       })
-      .filter((time) => time !== '');
-
-    console.log('Booked times for selected date:', bookedTimes);
-
+      .filter((time: string) => time !== '');
     return timeSlots.map((slot, index) => {
       const slot24h = convertTo24Hour(slot.time);
       const isBooked = bookedTimes.includes(slot24h);
-      console.log(`Slot ${slot.time} (${slot24h}) isBooked: ${isBooked}`);
       return {
         ...slot,
         isBooked,
@@ -309,7 +305,7 @@ export default function AppointmentScheduleScreen() {
     });
   };
 
-  const renderTimeSlot = (timeSlot, index) => {
+  const renderTimeSlot = (timeSlot: TimeSlot, index: number) => {
     const isSelected = timeSlot.time === selectedTime;
 
     return (
@@ -339,20 +335,13 @@ export default function AppointmentScheduleScreen() {
     );
   };
 
-  const handleDateSelect = (dayObj, index) => {
+  const handleDateSelect = (dayObj: CalendarDay, index: number) => {
     if (dayObj && !dayObj.isPast && dayObj.isAvailable) {
-      const dateObj = {
-        year: currentYear,
-        month: currentMonth,
-        day: dayObj.day,
-        formatted: formatDate(currentYear, currentMonth, dayObj.day),
-      };
-      console.log(`Selected date: ${dayObj.fullDate}, Index: ${index}`);
       setSelectedDateIndex(index);
       setSelectedTimeIndex(0);
-      setSelectedDate(dateObj);
+      setSelectedDate(dayObj);
       updateAppointmentData({
-        selectedDate: dateObj,
+        selectedDate: dayObj,
         selectedFullDate: dayObj.fullDate,
       });
     } else {
@@ -360,10 +349,10 @@ export default function AppointmentScheduleScreen() {
     }
   };
 
-  const handleTimeSelect = (time, index) => {
+  const handleTimeSelect = (time: string, index: number) => {
     const availableSlots = getAvailableTimeSlots();
     const selectedSlot = availableSlots[index];
-    if (selectedSlot.isBooked) {
+    if (selectedSlot && selectedSlot.isBooked) {
       Alert.alert('Unavailable', 'This time slot is already booked');
       return;
     }
@@ -372,10 +361,9 @@ export default function AppointmentScheduleScreen() {
     updateAppointmentData({ selectedTime: selectedSlot.time });
   };
 
-  const navigateMonth = (direction) => {
+  const navigateMonth = (direction: number) => {
     let newMonth = currentMonth + direction;
     let newYear = currentYear;
-    
     if (newMonth > 11) {
       newMonth = 0;
       newYear += 1;
@@ -383,116 +371,113 @@ export default function AppointmentScheduleScreen() {
       newMonth = 11;
       newYear -= 1;
     }
-    
-    // Don't allow navigation to past months
     const today = new Date();
     const targetDate = new Date(newYear, newMonth, 1);
     const currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
-    
     if (targetDate >= currentDate) {
       setCurrentMonth(newMonth);
       setCurrentYear(newYear);
-      
       // Clear selected date if it's no longer valid in the new month
-      if (selectedDate && (selectedDate.month !== newMonth || selectedDate.year !== newYear)) {
-        setSelectedDate(null);
-        updateAppointmentData({ selectedDate: null });
+      if (selectedDate && selectedDate.fullDate) {
+        const [selYear, selMonth] = selectedDate.fullDate.split('-');
+        if (parseInt(selYear) !== newYear || parseInt(selMonth) - 1 !== newMonth) {
+          setSelectedDate(null);
+          updateAppointmentData({ selectedDate: null });
+        }
       }
     }
   };
 
   const handleBookAppointment = async () => {
-      const selectedDate = availableDates[selectedDateIndex];
-          const availableSlots = getAvailableTimeSlots();
-          const selectedTime = availableSlots[selectedTimeIndex];
-          
-          if (!selectedDate.isAvailable) {
-              Alert.alert('Error', 'Selected date is not available');
-              return;
-          }
-          
-          if (selectedTime.isBooked) {
-              Alert.alert('Error', 'Selected time slot is already booked');
-              return;
-          }
-    
-          if (!selectedConsultant?.id) {
-              Alert.alert('Error', 'No consultant selected');
-              return;
-          }
-    
-          // Debug logging
-          console.log('Booking appointment with:', {
-              selectedDate: selectedDate.fullDate,
-              selectedTime: selectedTime.time,
-              consultant_id: selectedConsultant.id
+      const selectedDateObj = availableDates[selectedDateIndex];
+      const availableSlots = getAvailableTimeSlots();
+      const selectedTimeObj = availableSlots[selectedTimeIndex];
+      if (!selectedDateObj) {
+        Alert.alert('Error', 'No date selected');
+        return;
+      }
+      if (!selectedDateObj.isAvailable) {
+        Alert.alert('Error', 'Selected date is not available');
+        return;
+      }
+      if (!selectedTimeObj) {
+        Alert.alert('Error', 'No time selected');
+        return;
+      }
+      if (selectedTimeObj.isBooked) {
+        Alert.alert('Error', 'Selected time slot is already booked');
+        return;
+      }
+      if (!selectedConsultant?.id) {
+        Alert.alert('Error', 'No consultant selected');
+        return;
+      }
+
+      // Combine selected date and time into a single UTC ISO string
+      // selectedDateObj.fullDate: YYYY-MM-DD, selectedTimeObj.time: e.g. "12:30 PM"
+      const [year, month, day] = selectedDateObj.fullDate.split('-');
+      const time24h = convertTo24Hour(selectedTimeObj.time); // HH:mm
+      const [hours, minutes] = time24h.split(":");
+      // Create a Date object in local time, then convert to UTC ISO string
+      const localDate = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hours),
+        Number(minutes),
+        0,
+        0
+      );
+      const appointment_datetime = localDate.toISOString(); // always UTC
+
+      // Prepare appointment data for API
+      const appointmentData = {
+        consultant_id: selectedConsultant.id,
+        title: `Consultation with ${selectedConsultant.first_name} ${selectedConsultant.last_name}`,
+        description: reasonForVisit,
+        appointment_datetime, // UTC ISO string
+        duration_minutes: 90
+      };
+
+      try {
+        setIsBookingAppointment(true);
+        const response = await createAppointment(appointmentData);
+        if (response.success) {
+          updateAppointmentData({
+            appointment_datetime,
+            consultantId: selectedConsultant.id,
+            appointmentId: response.appointment.id
           });
-    
-          try {
-              setIsBookingAppointment(true);
-              
-              // Convert 12-hour time to 24-hour format with seconds
-              const time24h = convertTo24Hour(selectedTime.time);
-              const timeWithSeconds = time24h + ':00';
-              
-              // Prepare appointment data for API
-              const appointmentData = {
-                  consultant_id: selectedConsultant.id,
-                  title: `Consultation with ${selectedConsultant.first_name} ${selectedConsultant.last_name}`,
-                  description: reasonForVisit,
-                  appointment_date: selectedDate.fullDate, // YYYY-MM-DD format
-                  appointment_time: timeWithSeconds, // HH:MM:SS format
-                  duration_minutes: 90
-              };
-    
-              console.log('Sending appointment data:', appointmentData);
-    
-              // Call the API to create appointment
-              const response = await createAppointment(appointmentData);
-    
-              if (response.success) {
-                  // Update appointment data in context for any follow-up screens
-                  updateAppointmentData({
-                      selectedDate: `${selectedDate.day} ${selectedDate.date}`,
-                      selectedFullDate: selectedDate.fullDate,
-                      selectedTime: selectedTime.time,
-                      consultantId: selectedConsultant.id,
-                      appointmentId: response.appointment.id
-                  });
-    
-                  Alert.alert(
-                      'Appointment Booked!',
-                      `Your appointment with ${selectedConsultant.first_name} ${selectedConsultant.last_name} has been scheduled for ${selectedDate.day} ${selectedDate.date} at ${selectedTime.time}`,
-                      [
-                          { 
-                              text: 'OK', 
-                              onPress: () => {
-                                  // Refresh appointments to show the new booking
-                                  fetchConsultantAppointments();
-                                  // Navigate back or to appointments list
-                                  router.push("/(tabs)/schedule");                                 
-                                  // clearConsultant();
-                              }
-                          }
-                      ]
-                  );
-              } else {
-                  Alert.alert('Booking Failed', response.message || 'Failed to book appointment');
+          Alert.alert(
+            'Appointment Booked!',
+            `Your appointment with ${selectedConsultant.first_name} ${selectedConsultant.last_name} has been scheduled for ${selectedDateObj.fullDate} at ${selectedTimeObj.time}`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  fetchConsultantAppointments();
+                  router.push("/(tabs)/schedule");
+                }
               }
-          } catch (error) {
-              console.error('Error booking appointment:', error);
-              Alert.alert('Error', 'Failed to book appointment. Please try again.');
-          } finally {
-              setIsBookingAppointment(false);
-          }
+            ]
+          );
+        } else {
+          Alert.alert('Booking Failed', response.message || 'Failed to book appointment');
+        }
+      } catch (error) {
+        console.error('Error booking appointment:', error);
+        Alert.alert('Error', 'Failed to book appointment. Please try again.');
+      } finally {
+        setIsBookingAppointment(false);
+      }
   };
 
-  const renderCalendarDay = (dayObj, index) => {
+  const renderCalendarDay = (dayObj: CalendarDay | null, index: number) => {
     if (!dayObj) {
       return <View key={index} style={styles.calendarDay} />;
     }
 
-    const isSelected = selectedDate && selectedDate.day === dayObj.day;
+    const isSelected = selectedDate && (selectedDate as CalendarDay).day === dayObj.day;
     const isUnavailable = !dayObj.isAvailable && !dayObj.isPast;
 
     return (
@@ -608,7 +593,7 @@ export default function AppointmentScheduleScreen() {
               <View style={styles.appointmentTimeInfo}>
                 <Text style={styles.appointmentTime}>{selectedTime}</Text>
                 <Text style={styles.appointmentDate}>
-                  {selectedDate ? selectedDate.formatted : 'Select date'}
+                  {selectedDate ? selectedDate.fullDate : 'Select date'}
                 </Text>
               </View>
             </View>
@@ -683,7 +668,7 @@ export default function AppointmentScheduleScreen() {
           <View style={styles.priceContainer}>
             <Text style={styles.priceText}>{practitioner.price},00 USD</Text>
             <Text style={styles.appointmentDetails}>
-              {selectedTime}, {selectedDate ? selectedDate.formatted : 'No date selected'}
+              {selectedTime}, {selectedDate ? selectedDate.fullDate : 'No date selected'}
             </Text>
           </View>
           

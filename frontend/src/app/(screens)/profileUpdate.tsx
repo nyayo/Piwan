@@ -17,6 +17,7 @@ import KeyboardAwareScrollView from '../../components/KeyboardAwareView';
 import { useAuth } from '../../context/authContext';
 import { useUser } from '../../context/userContext';
 import ToastMessage from '../../components/ToastMessage';
+import { uploadToCloudinarySigned } from '../../services/cloudinaryUpload';
 
 const { width } = Dimensions.get("window");
 
@@ -31,10 +32,7 @@ const ProfileUpdateInfo = z.object({
     profileImage: z.string().optional(), // Add profile image to schema
 });
 
-type ProfileUpdateScreen = z.infer<typeof ProfileUpdateInfo>; 
-
-const CLOUDINARY_CLOUD_NAME = 'ddk2ygina';
-const CLOUDINARY_UPLOAD_PRESET = 'piwan_frontend_upload'; // Make sure this is unsigned
+type ProfileUpdateScreen = z.infer<typeof ProfileUpdateInfo>;
 
 const ProfileUpdateScreen = () => {
     const [loading, setLoading] = useState(false);
@@ -43,7 +41,7 @@ const ProfileUpdateScreen = () => {
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);
     const [localImageUri, setLocalImageUri] = useState(null); // For immediate preview
 
-    const { user } = useUser();
+    const { user, setUser } = useAuth();
     const { updateProfile } = useUser();
     const router = useRouter();
     
@@ -77,53 +75,21 @@ const ProfileUpdateScreen = () => {
         }
     }, [user, form]);
 
-    // Function to upload image to Cloudinary
-    const uploadImageToCloudinary = async (imageUri) => {
+    // Function to upload image to Cloudinary (signed)
+    const uploadImageToCloudinary = async (imageUri: string) => {
         try {
             setImageUploading(true);
-            
-            // Read the image file as base64
-            const base64 = await FileSystem.readAsStringAsync(imageUri, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
-            
-            // Prepare the upload data
-            const formData = new FormData();
-            formData.append('file', `data:image/jpeg;base64,${base64}`);
-            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-            formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
-            
-            // Optional: Add transformation parameters
-            // formData.append('transformation', 'c_fill,w_400,h_400,q_auto,f_auto');
-            
-            // Upload to Cloudinary
-            const response = await fetch(
-                `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-                {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                }
-            );
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                // Update the form with the new image URL
-                form.setValue('profileImage', data.secure_url);
-                setLocalImageUri(null); // Clear local preview since we have the uploaded URL
-                
-                Alert.alert('Success', 'Profile image uploaded successfully!');
-                return data.secure_url;
-            } else {
-                throw new Error(data.error?.message || 'Upload failed');
-            }
-        } catch (error) {
+            // Replace with your backend endpoint
+            const backendSignatureUrl = 'https://2490-41-75-184-146.ngrok-free.app/api/cloudinary-signature';
+            const secureUrl = await uploadToCloudinarySigned(imageUri, backendSignatureUrl);
+            form.setValue('profileImage', secureUrl);
+            setLocalImageUri(null);
+            Alert.alert('Success', 'Profile image uploaded successfully!');
+            return secureUrl;
+        } catch (error: any) {
             console.error('Cloudinary upload error:', error);
             Alert.alert('Upload Error', 'Failed to upload image. Please try again.');
-            setLocalImageUri(null); // Clear local preview on error
+            setLocalImageUri(null);
             return null;
         } finally {
             setImageUploading(false);
@@ -206,7 +172,7 @@ const ProfileUpdateScreen = () => {
             Alert.alert('Error', 'Please fill in all required fields');
             return;
         }
-
+        console.log('updating data', data)
         setLoading(true);
         try {
             const profileData = {
@@ -215,9 +181,11 @@ const ProfileUpdateScreen = () => {
             };
             
             const response = await updateProfile(profileData);
-            console.log('Update response:', response);
             
             if (response.success) {
+                if(response.user){
+                    setUser(response.user);
+                }
                 setShowSuccessMessage(true);
                 setTimeout(() => {
                     setShowSuccessMessage(false);

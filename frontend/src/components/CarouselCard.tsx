@@ -2,9 +2,20 @@ import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Modal, Tex
 import React, { useState, useEffect } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import COLORS from '../constants/theme';
-import { UpcomingType } from '../data/upcoming';
-import { convertToLocalDate, formatTime } from '../helper/convertDateTime';
+import { convertToLocalDate, formatTime, toLocalDateTimeString } from '../helper/convertDateTime';
 const { width: screenWidth } = Dimensions.get('window');
+
+// Fix UpcomingType to include all used fields
+export type UpcomingType = {
+    id: number;
+    appointment_datetime: string;
+    consultant_name: string;
+    profile_image: string;
+    profession: string;
+    location: string;
+    status: string;
+    [key: string]: any;
+};
 
 type CarouselCardProps = {
     appointment: UpcomingType;
@@ -21,12 +32,10 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
     useEffect(() => {
         const checkChatAvailability = () => {
             const now = new Date();
-            const appointmentDateTime = new Date(`${appointment.appointment_date} ${appointment.appointment_time}`);
-            
-            // Chat becomes active 15 minutes before appointment time and stays active for 2 hours after
+            // Use appointment_datetime if available, else fallback
+            const appointmentDateTime = appointment.appointment_datetime ? new Date(appointment.appointment_datetime) : new Date(`${appointment.appointment_date} ${appointment.appointment_time}`);
             const fifteenMinutesBefore = new Date(appointmentDateTime.getTime() - 15 * 60 * 1000);
             const twoHoursAfter = new Date(appointmentDateTime.getTime() + 2 * 60 * 60 * 1000);
-            
             setIsChatActive(now >= fifteenMinutesBefore && now <= twoHoursAfter);
         };
 
@@ -37,7 +46,7 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
         const interval = setInterval(checkChatAvailability, 60000);
 
         return () => clearInterval(interval);
-    }, [appointment.appointment_date, appointment.appointment_time]);
+    }, [appointment.appointment_datetime, appointment.appointment_date, appointment.appointment_time]);
 
     const handleCancelPress = () => {
         setShowCancelModal(true);
@@ -87,8 +96,8 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
                 </View>
                 
                 <View style={styles.dateTimeContainer}>
-                    <Text style={styles.appointmentDate}>{convertToLocalDate(appointment.appointment_date)}</Text>
-                    <Text style={styles.appointmentTime}>{formatTime(appointment.appointment_time)}</Text>
+                    <Text style={styles.appointmentDate}>{convertToLocalDate(appointment.appointment_datetime || appointment.appointment_date)}</Text>
+                    <Text style={styles.appointmentTime}>{formatTime(appointment.appointment_datetime || appointment.appointment_time)}</Text>
                 </View>
                 
                 <View style={styles.doctorSection}> 
@@ -346,7 +355,7 @@ const styles = StyleSheet.create({
     },
     reasonInput: {
         borderWidth: 1,
-        borderColor: COLORS.lightGray,
+        borderColor: COLORS.lightGrey,
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
@@ -360,7 +369,7 @@ const styles = StyleSheet.create({
     },
     modalCancelButton: {
         flex: 1,
-        backgroundColor: COLORS.lightGray,
+        backgroundColor: COLORS.lightGrey,
         borderRadius: 12,
         paddingVertical: 14,
         alignItems: 'center',

@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 import { Ionicons } from '@expo/vector-icons'; // For back button icon
 import COLORS from '../../constants/theme';
+import { router } from 'expo-router';
 
 type ResourcesProps = {
     id: number;
@@ -81,7 +82,8 @@ const resources = [
     },
 ];
 
-const renderItem = ({ item }: ResourcesProps) => {
+// Fix renderItem signature for FlatList
+const renderItem = ({ item }: { item: any }) => {
     if (item.isApplyCard) {
     return (
         <TouchableOpacity
@@ -109,11 +111,22 @@ const renderItem = ({ item }: ResourcesProps) => {
     );
     }
 
+    // Map resource id to screen route
+    const resourceRoutes: { [key: string]: string } = {
+      books: '/(screens)/BooksScreen',
+      audio: '/(screens)/AudioScreen',
+      articles: '/(screens)/ArticlesScreen',
+      routines: '/(screens)/RoutinesScreen',
+      music: '/(screens)/MusicScreen',
+      podcasts: '/(screens)/PodcastsScreen',
+    };
+
     return (
     <TouchableOpacity
         style={styles.card}
         onPress={() => {
-        console.log(`Tapped ${item.title}`);
+          const route = resourceRoutes[item.id];
+          if (route) router.push(route);
         }}
     >
         <View style={styles.cardHeader}>
