@@ -5,6 +5,7 @@ import React from 'react'
 import { calculateAge } from '../../helper/calculateAge';
 import { convertToLocalDate } from '../../helper/convertDateTime';
 import COLORS from '../../constants/theme';
+import truncateWords from '../../helper/truncateWords';
 
 const SchedulePastAppointment = ({appointment}) => {
     return (
@@ -23,11 +24,11 @@ const SchedulePastAppointment = ({appointment}) => {
                 </View>
             </View>
             <Text style={styles.pastPatientName}>{appointment.user_name}</Text>
-            <Text style={styles.pastCondition}>{appointment.condition}</Text>
-            <Text style={styles.pastNotes}>{appointment.notes}</Text>
+            <Text style={styles.pastCondition}>{truncateWords({ text: appointment.description, maxWords: 5 })}</Text>
+            <Text style={styles.pastNotes}>{truncateWords({ text: appointment.title, maxWords: 5 })}</Text>
             <View style={styles.pastAppointmentFooter}>
-                <Text style={styles.pastDuration}>{appointment.duration_minutes}</Text>
-                <Text style={[styles.pastStatus, { color: COLORS.success }]}>
+                <Text style={styles.pastDuration}>{appointment.duration_minutes} mins</Text>
+                <Text style={[styles.pastStatus, { color: appointment.status === 'completed' ? COLORS.success : COLORS.error }]}>
                     {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                 </Text>
             </View>

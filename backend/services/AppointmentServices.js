@@ -73,15 +73,16 @@ export const createAppointment = async(appointment, user_id) => {
         }
 
         const [result] = await pool.query(
-            `INSERT INTO appointments (user_id, consultant_id, title, description, appointment_datetime, duration_minutes, status, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+            `INSERT INTO appointments (user_id, consultant_id, title, description, appointment_datetime, duration_minutes, status, mood, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, NOW())`,
             [
                 user_id, 
                 appointment.consultant_id, 
                 appointment.title, 
                 appointment.description || null, 
                 appointmentDateTimeStr, 
-                durationInMinutes
+                durationInMinutes,
+                appointment.mood || null
             ]
         );
         
@@ -117,18 +118,17 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
         // Base query construction
         if (userType === 'user') {
             query = `
-                SELECT a.*, CONCAT(c.first_name, ' ', c.last_name) as consultant_name, 
-                c.profession, c.phone as consultant_phone, c.profile_image, c.dob
+                SELECT a.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email, u.phone as user_phone, u.profile_image, u.dob
                 FROM appointments a
-                JOIN consultants c ON a.consultant_id = c.id
-                WHERE a.user_id = ?
+                LEFT JOIN users u ON a.user_id = u.id
+                WHERE a.consultant_id = ?
             `;
             
             countQuery = `
                 SELECT COUNT(*) as total
                 FROM appointments a
-                JOIN consultants c ON a.consultant_id = c.id
-                WHERE a.user_id = ?
+                LEFT JOIN users u ON a.user_id = u.id
+                WHERE a.consultant_id = ?
             `;
             
             params = [userId];
@@ -137,14 +137,14 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
             query = `
                 SELECT a.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email, u.phone as user_phone, u.profile_image, u.dob
                 FROM appointments a
-                JOIN users u ON a.user_id = u.id
+                LEFT JOIN users u ON a.user_id = u.id
                 WHERE a.consultant_id = ?
             `;
             
             countQuery = `
                 SELECT COUNT(*) as total
                 FROM appointments a
-                JOIN users u ON a.user_id = u.id
+                LEFT JOIN users u ON a.user_id = u.id
                 WHERE a.consultant_id = ?
             `;
             
@@ -443,5 +443,124 @@ export const fetchConsultantReviewsPaginated = async (consultantId, page, limit,
             success: false,
             message: "Internal server error"
         };
+    }
+}
+
+// Block a slot for a consultant (status: 'blocked', no patient_id)
+export const blockAppointmentSlot = async ({ consultant_id, appointment_datetime, duration_minutes = 90 }) => {
+    try {
+        // Check for existing blocked slot at this time
+        const [conflicts] = await pool.query(
+            `SELECT id FROM appointments WHERE consultant_id = ? AND appointment_datetime = ? AND status = 'blocked'`,
+            [consultant_id, appointment_datetime]
+        );
+        if (conflicts.length > 0) {
+            return { success: false, message: 'Slot already blocked' };
+        }
+        await pool.query(
+            `INSERT INTO appointments (consultant_id, appointment_datetime, duration_minutes, status, user_id, created_at, updated_at) VALUES (?, ?, ?, 'blocked', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [consultant_id, appointment_datetime, duration_minutes]
+        );
+        return { success: true };
+    } catch (error) {
+        console.error('Error blocking slot:', error);
+        return { success: false, message: 'Internal server error' };
+    }
+};
+
+// Confirm a pending appointment (consultant only)
+export const confirmAppointment = async (consultantId, appointmentId) => {
+    try {
+        const [appointments] = await pool.query('SELECT * FROM appointments WHERE id = ?', [appointmentId]);
+        if (appointments.length === 0) {
+            return { success: false, message: 'Appointment not found' };
+        }
+        const appointment = appointments[0];
+        if (appointment.consultant_id !== consultantId) {
+            return { success: false, message: 'Not authorized to confirm this appointment' };
+        }
+        if (appointment.status !== 'pending') {
+            return { success: false, message: 'Only pending appointments can be confirmed' };
+        }
+        await pool.query(
+            'UPDATE appointments SET status = \'confirmed\', updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [appointmentId]
+        );
+        return { success: true, message: 'Appointment confirmed' };
+    } catch (error) {
+        console.error('Error confirming appointment:', error);
+        return { success: false, message: 'Internal server error' };
+    }
+};
+
+// Reject a pending appointment (consultant only)
+export const rejectAppointment = async (consultantId, appointmentId) => {
+    try {
+        const [appointments] = await pool.query('SELECT * FROM appointments WHERE id = ?', [appointmentId]);
+        if (appointments.length === 0) {
+            return { success: false, message: 'Appointment not found' };
+        }
+        const appointment = appointments[0];
+        if (appointment.consultant_id !== consultantId) {
+            return { success: false, message: 'Not authorized to reject this appointment' };
+        }
+        if (appointment.status !== 'pending') {
+            return { success: false, message: 'Only pending appointments can be rejected' };
+        }
+        await pool.query(
+            'UPDATE appointments SET status = \'rejected\', updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [appointmentId]
+        );
+        return { success: true, message: 'Appointment rejected' };
+    } catch (error) {
+        console.error('Error rejecting appointment:', error);
+        return { success: false, message: 'Internal server error' };
+    }
+};
+
+// Reschedule an appointment (user or consultant)
+export const rescheduleAppointment = async (userId, userType, appointmentId, newDateTime) => {
+    try {
+        const [appointments] = await pool.query('SELECT * FROM appointments WHERE id = ?', [appointmentId]);
+        if (appointments.length === 0) {
+            return { success: false, message: "Appointment not found" };
+        }
+        const appointment = appointments[0];
+        // Only the consultant or user who owns the appointment can reschedule
+        if (
+            (userType === 'consultant' && appointment.consultant_id !== userId) ||
+            (userType === 'user' && appointment.user_id !== userId)
+        ) {
+            return { success: false, message: "Not authorized to reschedule this appointment" };
+        }
+        // Check for conflicts (reuse your conflict logic)
+        const [conflicts] = await pool.query(
+            `SELECT id FROM appointments 
+             WHERE consultant_id = ? 
+             AND id != ? 
+             AND status IN ('pending', 'confirmed') 
+             AND (
+                (appointment_datetime <= ? AND DATE_ADD(appointment_datetime, INTERVAL duration_minutes MINUTE) > ?)
+                OR
+                (appointment_datetime < ? AND DATE_ADD(appointment_datetime, INTERVAL duration_minutes MINUTE) >= ?)
+             )`,
+            [
+                appointment.consultant_id,
+                appointmentId,
+                newDateTime, newDateTime,
+                newDateTime, newDateTime
+            ]
+        );
+        if (conflicts.length > 0) {
+            return { success: false, message: "Time slot is already booked" };
+        }
+        await pool.query(
+            'UPDATE appointments SET appointment_datetime = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [newDateTime, 'pending', appointmentId]
+        );
+        return { success: true, message: "Appointment rescheduled successfully" };
+    } catch (error) {
+        console.error('Error rescheduling appointment:', error);
+        return { success: false, message: "Internal server error" };
     }
 };

@@ -7,6 +7,7 @@ import appointmentRoutes from './routes/appointmentRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
 import cloudinarySignatureRouter from './routes/cloudinarySignature.js';
+import moodRoutes from './routes/moodRoutes.js';
 import cors from 'cors';
 
 const app = express();
@@ -18,6 +19,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/mood', moodRoutes);
 app.use('/api', cloudinarySignatureRouter);
 
 app.listen(3000, async() => {

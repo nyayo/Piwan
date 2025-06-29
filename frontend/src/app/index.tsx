@@ -20,6 +20,7 @@ export default function App() {
     
     return (
         <>
+            {/* <Redirect href={'/(screens)/consultants/realestate'} /> */}
             {isAuthenticated ? 
                 <Redirect href={user?.role === 'consultant' ? '/(consultants)/' : '/(users)/'} /> : 
                 <Redirect href={'/(auth)/login'} />

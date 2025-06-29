@@ -4,7 +4,10 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
+    "@react-native-community/datetimepicker": "^8.4.2",
     "react-hook-form": "^7.57.0",
+    "react-native-modal": "^14.0.0-rc.1",
+    "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-webview": "^13.15.0",
     "zod": "^3.25.62"
   }

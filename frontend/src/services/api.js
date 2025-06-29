@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure base URL (update with your backend URL)
-const API_BASE_URL = 'https://2490-41-75-184-146.ngrok-free.app/api'; // Use your local IP
+const API_BASE_URL = 'https://8746-41-75-178-179.ngrok-free.app/api'; // Use your local IP
 // For development on physical device, use your computer's IP address
 // For iOS simulator: http://localhost:3000/api
 // For Android emulator: http://10.0.2.2:3000/api
@@ -423,20 +423,80 @@ export const submitReview = async (consultantId, reviewData) => {
 
 export const cancelAppointment = async (appointment, cancelData) => {
     try {
-        if (!cancelData) {
-            throw new Error('Cancellation data is required');
-        }
-
-        if (!appointment) {
-            throw new Error('Appointment data is required');
-        }
-
-        const response = await apiClient.patch(`/appointments/${appointment.id}/status`, cancelData);
-        
+        if (!cancelData) throw new Error('Cancellation data is required');
+        if (!appointment) throw new Error('Appointment data is required');
+        // Use the cancel endpoint
+        const response = await apiClient.post(`/appointments/${appointment.id}/cancel`, cancelData);
         return response.data;
     } catch (error) {
         throw handleApiError(error);
     }
+};
+
+// Add this to your API service
+export const blockConsultantSlot = async ({ appointment_datetime, duration_minutes = 90 }) => {
+  try {
+    const response = await apiClient.post('/appointments/block', {
+      appointment_datetime,
+      duration_minutes
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// Confirm a pending appointment (consultant only)
+export const confirmAppointment = async (appointmentId) => {
+  try {
+    const response = await apiClient.post(`/appointments/${appointmentId}/confirm`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// Reject a pending appointment (consultant only)
+export const rejectAppointment = async (appointmentId) => {
+  try {
+    const response = await apiClient.post(`/appointments/${appointmentId}/reject`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const rescheduleAppointment = async (appointmentId, new_datetime) => {
+    try {
+        const response = await apiClient.post(`/appointments/${appointmentId}/reschedule`, { new_datetime });
+        return response.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+// --- Mood Tracking API ---
+// Get the user's mood for a specific date (YYYY-MM-DD)
+export const getUserMood = async (date) => {
+  try {
+    const response = await apiClient.get(`/mood?date=${date}`);
+    // Expected response: { mood: number }
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return null; // No mood set for this date
+    }
+    throw handleApiError(error);
+  }
+};
+
+// Set the user's mood for a specific date (YYYY-MM-DD)
+export const setUserMood = async (date, mood) => {
+  try {
+    await apiClient.post('/mood', { date, mood });
+  } catch (error) {
+    throw handleApiError(error);
+  }
 };
 
 // Default export with all functions for backward compatibility

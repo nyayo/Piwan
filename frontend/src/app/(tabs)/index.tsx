@@ -19,8 +19,7 @@ import CustomModal from '../../components/CustomModal';
 import { data, DataType } from '../../data/card-data';
 import { useUser } from '../../context/userContext';
 import { useAuth } from '../../context/authContext';
-import { getRecentActivities } from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getRecentActivities, getUserMood, setUserMood } from '../../services/api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -65,6 +64,36 @@ const loadUpcomingEvents = async (): Promise<DataType[]> => {
   }
 };
 
+const MOOD_KEY = 'userMood';
+const MOOD_DATE_KEY = 'userMoodDate';
+
+const moodMessages = [
+  'We all have tough days. Remember, you are not alone.', // 1
+  'Hang in there. Better days are coming.', // 2
+  'Take a deep breath. You are doing your best.', // 3
+  'It’s okay to feel down sometimes. Be kind to yourself.', // 4
+  'You are stronger than you think.', // 5
+  'Keep going, you are making progress.', // 6
+  'You’re doing well. Celebrate small wins.', // 7
+  'Great job! Keep up the positive energy.', // 8
+  'You’re shining bright today!', // 9
+  'Amazing! Spread your positivity!', // 10
+];
+
+const getTodayString = () => new Date().toISOString().split('T')[0];
+
+// Map mood value to emoji index
+const getEmojiIndexForMood = (mood: number | null) => {
+  if (!mood) return -1;
+  if (mood <= 2) return 0;
+  if (mood <= 4) return 1;
+  if (mood <= 6) return 2;
+  if (mood <= 8) return 3;
+  return 4;
+};
+
+const moodEmojis = ['😢', '😐', '😊', '😄', '🤩'];
+
 const Index = () => {
   const { width } = useWindowDimensions();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -75,6 +104,9 @@ const Index = () => {
   const [upcomingEvents, setUpcomingEvents] = useState<DataType[]>([]);
   const [recentActivities, setRecentActivities] = useState<BackendActivity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [moodModalVisible, setMoodModalVisible] = useState(false);
+  const [selectedMoodValue, setSelectedMoodValue] = useState<number | null>(null);
+  const [moodMessage, setMoodMessage] = useState('');
   const navigation = useNavigation();
   const { loading, profile, isAuthenticated } = useUser();
   const { user } = useAuth();
@@ -129,6 +161,38 @@ const Index = () => {
     return () => clearInterval(interval);
   }, [upcomingEvents.length]);
 
+  // Show mood modal on app open if not set for today (use backend)
+  useEffect(() => {
+    const checkMood = async () => {
+      if (!user) return;
+      const today = getTodayString();
+      try {
+        const res = await getUserMood(today);
+        if (!res || typeof res.mood !== 'number') {
+          setMoodModalVisible(true);
+        } else {
+          setSelectedMoodValue(res.mood);
+          setMoodMessage(moodMessages[res.mood - 1]);
+        }
+      } catch (e) {
+        setMoodModalVisible(true);
+      }
+    };
+    checkMood();
+  }, [user]);
+
+  // Save mood selection (to backend)
+  const handleMoodSelect = async (value: number) => {
+    setSelectedMoodValue(value);
+    setMoodMessage(moodMessages[value - 1]);
+    setMoodModalVisible(false);
+    try {
+      await setUserMood(getTodayString(), value);
+    } catch (e) {
+      // Optionally show error
+    }
+  };
+
   if (loading) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -143,6 +207,33 @@ const Index = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Mood Modal */}
+        <Modal
+          visible={moodModalVisible}
+          transparent
+          animationType="slide"
+        >
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 320, alignItems: 'center' }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: COLORS.textDark }}>How are you feeling today?</Text>
+              <Text style={{ color: COLORS.textSecondary, marginBottom: 20 }}>Select your mood (1 = worst, 10 = best)</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={{
+                      width: 36, height: 36, borderRadius: 18, margin: 6, alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: selectedMoodValue === i + 1 ? COLORS.primary : COLORS.lightGrey,
+                    }}
+                    onPress={() => handleMoodSelect(i + 1)}
+                  >
+                    <Text style={{ color: selectedMoodValue === i + 1 ? COLORS.white : COLORS.textDark, fontWeight: 'bold' }}>{i + 1}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        </Modal>
         <ScrollView style={styles.container}>
           {/* Top Bar */}
           <View style={styles.topBar}>
@@ -170,20 +261,36 @@ const Index = () => {
           {/* Mood Tracker */}
           <View style={styles.moodTracker}>
             <Text style={styles.sectionTitle}>How are you feeling today?</Text>
-            <View style={styles.moodOptions}>
-              {['😊', '😐', '😢', '😣', '😄'].map((emoji, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.moodButton,
-                    selectedMood === emoji && styles.selectedMoodButton,
-                  ]}
-                  onPress={() => setSelectedMood(emoji)}
-                > 
-                  <Text style={styles.moodEmoji}>{emoji}</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+              {moodEmojis.map((emoji, idx) => {
+                const isActive = getEmojiIndexForMood(selectedMoodValue) === idx;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.moodButton,
+                      isActive && styles.selectedMoodButton,
+                      { width: 48, height: 48, borderRadius: 24, marginHorizontal: 4, alignItems: 'center', justifyContent: 'center' }
+                    ]}
+                    onPress={() => setMoodModalVisible(true)}
+                  >
+                    <Text style={{ fontSize: 28 }}>{emoji}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+            {selectedMoodValue ? (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={{ fontSize: 16, color: COLORS.textDark, fontWeight: '600' }}>Mood: {selectedMoodValue} / 10</Text>
+                <Text style={{ color: COLORS.primary, fontSize: 15, marginTop: 4 }}>{moodMessage}</Text>
+              </View>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.moodButton, { alignSelf: 'flex-start', marginTop: 8 }]}
+              onPress={() => setMoodModalVisible(true)}
+            >
+              <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Update Mood</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Upcoming Events Carousel */}

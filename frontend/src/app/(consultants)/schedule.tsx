@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, TextInput, Alert } from 'react-native';
 import React, { useEffect, useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,20 +9,11 @@ import SchedulePastAppointment from '../../components/consultants/SchedulePastAp
 import SchedulePendingAppointment from '../../components/consultants/SchedulePendingAppointment';
 import BlockTimeModal from '../../components/consultants/BlockTimeModal';
 import { router } from 'expo-router';
-import { getConsultantAppointments } from '../../services/api';
+import { getConsultantAppointments, blockConsultantSlot, confirmAppointment as apiConfirmAppointment, rejectAppointment as apiRejectAppointment, rescheduleAppointment as apiRescheduleAppointment, cancelAppointment as apiCancelAppointment } from '../../services/api';
 import { useAuth } from '../../context/authContext';
 import generateTimeSlots from '../../helper/timeSlot';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-// Calendar dates
-const calendarDates = [
-    { date: 16, day: 'Fri', isToday: false, appointmentCount: 2 },
-    { date: 17, day: 'Sat', isToday: false, appointmentCount: 1 },
-    { date: 18, day: 'Sun', isToday: true, appointmentCount: 4 },
-    { date: 19, day: 'Mon', isToday: false, appointmentCount: 3 },
-    { date: 20, day: 'Tue', isToday: false, appointmentCount: 2 },
-];
 
 type CalendarDate = {
     date: Date;
@@ -66,7 +57,7 @@ const ScheduleScreen = () => {
     const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
     const [activeTab, setActiveTab] = useState('today');
     const [showBlockTimeModal, setShowBlockTimeModal] = useState(false);
-    const [blockTimeData, setBlockTimeData] = useState({ time: '', duration: '', reason: '' });
+    const [blockTimeData, setBlockTimeData] = useState({ time: '', duration: '' });
     const [viewMode, setViewMode] = useState('list'); // list or timeline
     // Define state for pending and past appointments
     const [pendingList, setPendingList] = useState<Appointment[]>([]);
@@ -83,17 +74,24 @@ const ScheduleScreen = () => {
     ];
 
     // Add functions to handle pending appointment actions
-    // Fix 2: Ensure appointmentId and apt.id are same type
-    const confirmAppointment = (appointmentId: string | number) => {
-        setPendingList(prev => prev.filter(apt => String(apt.id) !== String(appointmentId)));
-        // Here you would typically make an API call to confirm the appointment
-        console.log('Appointment confirmed:', appointmentId);
+    const confirmAppointment = async (appointmentId: string | number) => {
+        try {
+            await apiConfirmAppointment(appointmentId);
+            setPendingList(prev => prev.filter(apt => String(apt.id) !== String(appointmentId)));
+        } catch (error) {
+            // Optionally show error to user
+            console.error('Failed to confirm appointment:', error);
+        }
     };
 
-    const rejectAppointment = (appointmentId: string | number) => {
-        setPendingList(prev => prev.filter(apt => String(apt.id) !== String(appointmentId)));
-        // Here you would typically make an API call to reject the appointment
-        console.log('Appointment rejected:', appointmentId);
+    const rejectAppointment = async (appointmentId: string | number) => {
+        try {
+            await apiRejectAppointment(appointmentId);
+            setPendingList(prev => prev.filter(apt => String(apt.id) !== String(appointmentId)));
+        } catch (error) {
+            // Optionally show error to user
+            console.error('Failed to reject appointment:', error);
+        }
     };
 
     const handlePatientDetails = () => {
@@ -149,29 +147,60 @@ const ScheduleScreen = () => {
             const slotDuration = 90;
             const allSlots = generateTimeSlots(available_from, available_to, slotDuration);
 
-            // Fetch confirmed appointments for the selected date
-            const filters = { date: formatDate(date), status: 'confirmed' };
+            // Fetch all appointments for the selected date (confirmed and blocked)
+            const filters = { date: formatDate(date) };
             const result = await getConsultantAppointments(consultantId, filters);
-            let bookedTimes: string[] = [];
             let bookedAppointments: any[] = [];
+            let blockedAppointments: any[] = [];
             if (result.success && result.appointments) {
-                bookedAppointments = result.appointments.map((apt: any) => {
-                    // Convert backend UTC appointment time to local time string (HH:mm)
-                    const localDate = new Date(apt.appointment_datetime);
-                    const hours = localDate.getHours().toString().padStart(2, '0');
-                    const minutes = localDate.getMinutes().toString().padStart(2, '0');
-                    return {
-                        ...apt,
-                        localTime: `${hours}:${minutes}`
-                    };
-                });
-                bookedTimes = bookedAppointments.map(apt => apt.localTime);
+                bookedAppointments = result.appointments
+                    .filter((apt: any) => apt.status === 'confirmed')
+                    .map((apt: any) => {
+                        // Convert backend UTC appointment time to local time string (HH:mm)
+                        const localDate = new Date(apt.appointment_datetime);
+                        const hours = localDate.getHours().toString().padStart(2, '0');
+                        const minutes = localDate.getMinutes().toString().padStart(2, '0');
+                        return {
+                            ...apt,
+                            localTime: `${hours}:${minutes}`
+                        };
+                    });
+                blockedAppointments = result.appointments
+                    .filter((apt: any) => apt.status === 'blocked')
+                    .map((apt: any) => {
+                        const localDate = new Date(apt.appointment_datetime);
+                        const hours = localDate.getHours().toString().padStart(2, '0');
+                        const minutes = localDate.getMinutes().toString().padStart(2, '0');
+                        return {
+                            ...apt,
+                            localTime: `${hours}:${minutes}`
+                        };
+                    });
             }
+            const bookedTimes = bookedAppointments.map(apt => apt.localTime);
+            const blockedTimes = blockedAppointments.map(apt => apt.localTime);
 
-            // Mark slots as booked if they match a confirmed appointment (local time)
+            console.log('All appointments:', result.appointments);
+            console.log('Blocked appointments:', blockedAppointments);
+
+            // Mark slots as booked or blocked if they match an appointment (local time)
+        
             const slotsWithStatus = allSlots.map((slot: any) => {
                 const slotDate = parseTimeToDate(date, slot.time);
                 const slotLocal = `${slotDate.getHours().toString().padStart(2, '0')}:${slotDate.getMinutes().toString().padStart(2, '0')}`;
+                const blockedApt = blockedAppointments.find(apt => apt.localTime === slotLocal);
+                console.log('Blocked appointment: ', blockedApt)
+                console.log('Slot time:', slot.time, 'Slot local:', slotLocal);
+                console.log('Blocked localTimes:', blockedAppointments.map(b => b.localTime));
+                if (blockedApt) {
+                    return {
+                        ...slot,
+                        status: 'blocked',
+                        isBooked: false,
+                        appointment: null,
+                        reason: blockedApt.reason || undefined,
+                    };
+                }
                 const apt = bookedAppointments.find(apt => apt.localTime === slotLocal);
                 const isBooked = Boolean(apt);
                 return {
@@ -310,7 +339,7 @@ const ScheduleScreen = () => {
             }
         };
         return (
-            <TouchableOpacity key={slot.id || index} style={styles.timeSlotCard}>
+            <TouchableOpacity key={slot.id || index} style={styles.timeSlotCard} disabled={slot.status === 'blocked'}>
                 <View style={styles.timeSlotHeader}>
                     <Text style={styles.timeSlotTime}>{slot.time || slot.start}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: getSlotColor(slot.status) + '20' }]}> 
@@ -320,6 +349,14 @@ const ScheduleScreen = () => {
                         </Text>
                     </View>
                 </View>
+                {slot.status === 'available' && (
+                    <TouchableOpacity style={{ marginTop: 8, alignSelf: 'flex-end' }} onPress={() => handleBlockSlotPress(slot.time)}>
+                        <Text style={{ color: COLORS.error, fontSize: 12 }}>Block Slot</Text>
+                    </TouchableOpacity>
+                )}
+                {slot.status === 'blocked' && (
+                    <Text style={{ color: COLORS.error, fontSize: 12, marginTop: 8 }}>Blocked</Text>
+                )}
                 {slot.patient && (
                     <Text style={styles.slotPatient}>{slot.patient}</Text>
                 )}
@@ -331,7 +368,7 @@ const ScheduleScreen = () => {
         );
     };
 
-    // In renderContent, filter only confirmed appointments and pass slot time
+    // In renderContent, pass onDateChange to ScheduleAppointmentCard
     const renderContent = () => {
         switch (activeTab) {
             case 'today':
@@ -369,11 +406,16 @@ const ScheduleScreen = () => {
                                             </View>
                                         );
                                     }
+                                    const availableSlots = getAvailableSlotsForReschedule();
                                     return occupiedSlots.map((slot, idx) => (
                                         <ScheduleAppointmentCard
                                             key={slot.id || idx}
                                             appointment={{ ...slot.appointment, time: slot.time}}
                                             handlePatientDetails={handlePatientDetails}
+                                            availableSlots={availableSlots}
+                                            onReschedule={handleReschedule}
+                                            onCancel={handleCancel}
+                                            onDateChange={getAvailableSlotsForDate}
                                         />
                                     ));
                                 })()
@@ -486,7 +528,7 @@ const ScheduleScreen = () => {
             }
         };
         const fetchPast = async () => {
-            const filters = { status: 'completed', limit: 100 };
+            const filters = { status: 'completed, cancelled', limit: 100 };
             const result = await getConsultantAppointments(consultantId, filters);
             if (result.success && result.appointments) {
                 setPastAppointments(result.appointments);
@@ -545,22 +587,181 @@ const ScheduleScreen = () => {
         return new Date(d.setDate(diff));
     };
 
+    // --- Block Slot Functionality ---
+    // Open modal and set slot time
+    const handleBlockSlotPress = (slotTime: string) => {
+        setBlockTimeData({ ...blockTimeData, time: slotTime });
+        setShowBlockTimeModal(true);
+    };
+
+    // Called from modal to actually block the slot
+    const confirmBlockTimeSlot = async () => {
+        if (!consultantId || !blockTimeData.time) return;
+        let [hours, minutes] = blockTimeData.time.split(':');
+        if (minutes && minutes.length > 2) minutes = minutes.slice(0, 2);
+        const blockDate = new Date(selectedDate);
+        blockDate.setHours(Number(hours), Number(minutes), 0, 0);
+        const appointment_datetime = blockDate.toISOString();
+        try {
+            await blockConsultantSlot({ appointment_datetime, duration_minutes: Number(blockTimeData.duration) || 90 });
+            setShowBlockTimeModal(false);
+            setBlockTimeData({ time: '', duration: '' });
+            fetchTimeSlots(selectedDate);
+        } catch (e) {
+            console.error('Failed to block slot', e);
+        }
+    };
+
+    // Helper to format date for display (e.g., Monday, 30 June 2025)
+    const formatDisplayDate = (date: Date): string => {
+        return date.toLocaleDateString(undefined, {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+    };
+
+    // Helper to check if selected date is today
+    const isToday = (date: Date) => {
+        const now = new Date();
+        return (
+            date.getDate() === now.getDate() &&
+            date.getMonth() === now.getMonth() &&
+            date.getFullYear() === now.getFullYear()
+        );
+    };
+
+    // Get number of patients for selected date
+    const numPatients = timeSlots.filter(slot => slot.status === 'occupied' && slot.appointment).length;
+    const subGreetingText = isToday(selectedDate)
+        ? `You have ${numPatients} patient${numPatients === 1 ? '' : 's'} today`
+        : `You have ${numPatients} patient${numPatients === 1 ? '' : 's'} on ${formatDisplayDate(selectedDate)}`;
+
+    // Helper to format date for header (e.g., Sun, 18 Jun)
+    const formatHeaderDate = (date: Date): string =>
+  date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
+const handlePrevDay = () => setSelectedDate(prev => {
+  const d = new Date(prev);
+  d.setDate(d.getDate() - 1);
+  return d;
+});
+const handleNextDay = () => setSelectedDate(prev => {
+  const d = new Date(prev);
+  d.setDate(d.getDate() + 1);
+  return d;
+});
+const handleToday = () => setSelectedDate(new Date());
+
+    // Only slots that are 'available' (not occupied/blocked)
+    const getAvailableSlotsForReschedule = () => {
+        return timeSlots.filter(slot => slot.status === 'available').map(slot => slot.time);
+    };
+
+    // Helper to get available slots for a given date
+    const getAvailableSlotsForDate = async (date: Date) => {
+        await fetchTimeSlots(date); // This updates timeSlots state
+        // Wait for state update, so return slots for this date
+        // Instead, regenerate slots for the date synchronously
+        const available_from = user?.available_from || '09:00';
+        const available_to = user?.available_to || '17:00';
+        const slotDuration = 90;
+        const allSlots = generateTimeSlots(available_from, available_to, slotDuration);
+        const filters = { date: formatDate(date) };
+        const result = await getConsultantAppointments(consultantId, filters);
+        let bookedAppointments: any[] = [];
+        let blockedAppointments: any[] = [];
+        if (result.success && result.appointments) {
+            bookedAppointments = result.appointments.filter((apt: any) => apt.status === 'confirmed').map((apt: any) => {
+                const localDate = new Date(apt.appointment_datetime);
+                const hours = localDate.getHours().toString().padStart(2, '0');
+                const minutes = localDate.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+            });
+            blockedAppointments = result.appointments.filter((apt: any) => apt.status === 'blocked').map((apt: any) => {
+                const localDate = new Date(apt.appointment_datetime);
+                const hours = localDate.getHours().toString().padStart(2, '0');
+                const minutes = localDate.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+            });
+        }
+        return allSlots.filter(slot => !bookedAppointments.includes(slot.time) && !blockedAppointments.includes(slot.time)).map(slot => slot.time);
+    };
+
+    const handleReschedule = async (appointment, newDate, newTime) => {
+        try {
+            // Ensure newDate is a valid Date object
+            const dateObj = (newDate instanceof Date) ? new Date(newDate) : new Date(newDate);
+            if (isNaN(dateObj.getTime())) throw new Error('Invalid date');
+
+            // Handle both 12-hour (e.g. "12:30 PM") and 24-hour (e.g. "14:30") formats
+            let hours, minutes;
+            if (/AM|PM/i.test(newTime)) {
+                // 12-hour format
+                let [time, modifier] = newTime.split(' ');
+                [hours, minutes] = time.split(':');
+                if (hours === '12') hours = '00';
+                if (modifier.toUpperCase() === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+            } else {
+                // 24-hour format
+                [hours, minutes] = newTime.split(':');
+            }
+            if (hours === undefined || minutes === undefined) throw new Error('Invalid time format');
+            dateObj.setHours(Number(hours), Number(minutes), 0, 0);
+            if (isNaN(dateObj.getTime())) throw new Error('Date value out of bounds after setHours');
+            const new_datetime = dateObj.toISOString();
+            const result = await apiRescheduleAppointment(appointment.id, new_datetime);
+            if (result.success) {
+                console.log('Rescheduled appointments: ', result)
+                // Optionally refresh appointments or show a success message
+            } else {
+                console.log('Error occurred during reschedule')
+                // Show error to user
+            }
+        } catch (error) {
+            console.log('Reschedule error: ', error)
+            // Show error to user
+        }
+    };
+
+    const handleCancel = async (appointment, reason = '') => {
+        try {
+            const result = await apiCancelAppointment(appointment, { cancellation_reason: reason });
+            if (result.success) {
+                Alert.alert('Cancelled', 'Appointment cancelled successfully');
+                // Optionally refresh appointments here
+            } else {
+                Alert.alert('Error', result.message || 'Failed to cancel appointment');
+            }
+        } catch (error) {
+            Alert.alert('Error', error.message || 'Failed to cancel appointment');
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
                     <Text style={styles.headerTitle}>My Schedule</Text>
-                    <TouchableOpacity style={styles.calendarButton}>
-                        <Ionicons name="calendar-outline" size={20} color={COLORS.textDark} />
-                        <Text style={styles.calendarButtonText}>Sun, 18 May 25</Text>
-                        <Ionicons name="chevron-down" size={16} color={COLORS.textDark} />
-                    </TouchableOpacity>
+                    <View style={styles.headerNavButtons}>
+                        <TouchableOpacity onPress={handlePrevDay} style={styles.headerIconButton}>
+                            <Ionicons name="chevron-back" size={18} color={COLORS.textDark} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleToday} style={styles.todayButton}>
+                            <Text style={styles.todayButtonText}>Today</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.headerDateText}>{formatHeaderDate(selectedDate)}</Text>
+                        <TouchableOpacity onPress={handleNextDay} style={styles.headerIconButton}>
+                            <Ionicons name="chevron-forward" size={18} color={COLORS.textDark} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
                 
                 <View style={styles.greetingSection}>
                     <Text style={styles.greeting}>Hello, Dr. {user?.first_name} {user?.last_name} 👋</Text>
-                    <Text style={styles.subGreeting}>You have 4 patients today</Text>
+                    <Text style={styles.subGreeting}>{subGreetingText}</Text>
                 </View>
             </View>
 
@@ -586,6 +787,7 @@ const ScheduleScreen = () => {
                 setBlockTimeData={setBlockTimeData} 
                 setShowBlockTimeModal={setShowBlockTimeModal} 
                 blockTimeData={blockTimeData} 
+                onConfirm={confirmBlockTimeSlot}
             />
 
             <StatusBar style="dark" />
@@ -617,20 +819,44 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: COLORS.textDark,
+        flexShrink: 1,
+        marginRight: 8,
     },
-    calendarButton: {
+    headerNavButtons: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 2,
         backgroundColor: COLORS.lightGrey,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
         borderRadius: 12,
-        gap: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+        minWidth: 0,
+        maxWidth: 200,
     },
-    calendarButtonText: {
+    headerIconButton: {
+        padding: 2,
+        borderRadius: 8,
+    },
+    todayButton: {
+        backgroundColor: COLORS.primary,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        marginHorizontal: 4,
+        minWidth: 0,
+    },
+    todayButtonText: {
+        color: COLORS.white,
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    headerDateText: {
         fontSize: 14,
         color: COLORS.textDark,
         fontWeight: '500',
+        marginHorizontal: 6,
+        minWidth: 50,
+        textAlign: 'center',
     },
     greetingSection: {
         marginBottom: 10,

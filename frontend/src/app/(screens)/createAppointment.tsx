@@ -10,12 +10,14 @@ import {
   StatusBar,
   Image,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useNavigation } from 'expo-router';
 import { useConsultant } from '../../context/consultantContext';
 import generateTimeSlots from '../../helper/timeSlot';
+import RenderTimeSlot, { TimeSlot } from '../../components/TimeSlot';
 import { createAppointment, getConsultantAppointments, getDateRange } from '../../services/api';
 
 const COLORS = {
@@ -122,10 +124,20 @@ interface CalendarDay {
   isAvailable: boolean;
   bookedSlots: string[];
 }
-interface TimeSlot {
-  time: string;
-  isBooked?: boolean;
-}
+
+const moodMessages = [
+  'We all have tough days. Remember, you are not alone.',
+  'Hang in there. Better days are coming.',
+  'Take a deep breath. You are doing your best.',
+  'It’s okay to feel down sometimes. Be kind to yourself.',
+  'You are stronger than you think.',
+  'Keep going, you are making progress.',
+  'You’re doing well. Celebrate small wins.',
+  'Great job! Keep up the positive energy.',
+  'You’re shining bright today!',
+  'Amazing! Spread your positivity!',
+];
+const getTodayString = () => new Date().toISOString().split('T')[0];
 
 export default function AppointmentScheduleScreen() {
   const { selectedConsultant, appointmentData, updateAppointmentData, clearConsultant } = useConsultant();
@@ -150,6 +162,9 @@ export default function AppointmentScheduleScreen() {
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [selectedTimeIndex, setSelectedTimeIndex] = useState(1);
   const [availableDates, setAvailableDates] = useState<(CalendarDay | null)[]>(calendarDays);
+  const [moodModalVisible, setMoodModalVisible] = useState(false);
+  const [selectedMoodValue, setSelectedMoodValue] = useState<number | null>(null);
+  const [moodMessage, setMoodMessage] = useState('');
 
   // Auto-update calendar every minute to handle date changes
   useEffect(() => {
@@ -178,12 +193,13 @@ export default function AppointmentScheduleScreen() {
           // Get next 30 days date range
           const dateRange = getDateRange(30);
           
+          // Fetch both confirmed and blocked slots
           const response = await getConsultantAppointments(
               selectedConsultant.id,
               {
                   date_from: dateRange.from,
                   date_to: dateRange.to,
-                  status: 'confirmed'
+                  status: 'confirmed,blocked' // <-- include blocked
               }
           );
 
@@ -235,26 +251,26 @@ export default function AppointmentScheduleScreen() {
 
       console.log(`Date ${dateInfo.fullDate}: ${appointmentsOnDate.length} appointments found`);
 
-      const bookedTimesIn24Hour = appointmentsOnDate
+      // Mark both confirmed and blocked slots as unavailable
+      const unavailableTimesIn24Hour = appointmentsOnDate
+        .filter((apt) => apt.status === 'confirmed' || apt.status === 'blocked')
         .map((apt) => {
           if (!apt.appointment_datetime) return null;
-          const utcDate = new Date(apt.appointment_datetime);
-          const hours = utcDate.getUTCHours().toString().padStart(2, '0');
-          const minutes = utcDate.getUTCMinutes().toString().padStart(2, '0');
+          const localDate = new Date(apt.appointment_datetime);
+          const hours = localDate.getHours().toString().padStart(2, '0');
+          const minutes = localDate.getMinutes().toString().padStart(2, '0');
           return `${hours}:${minutes}`;
         })
         .filter((time) => time !== null);
-
-      console.log(`Booked times (24h format) for ${dateInfo.fullDate}:`, bookedTimesIn24Hour);
 
       const timeSlotsIn24Hour = timeSlots.map((slot) => convertTo24Hour(slot.time));
       console.log(`Available time slots (24h format):`, timeSlotsIn24Hour);
 
       const availableSlots = timeSlots.filter((slot, index) => {
         const slot24h = timeSlotsIn24Hour[index];
-        const isBooked = bookedTimesIn24Hour.includes(slot24h);
-        console.log(`Slot ${slot.time} (${slot24h}) is ${isBooked ? 'BOOKED' : 'AVAILABLE'}`);
-        return !isBooked;
+        const isUnavailable = unavailableTimesIn24Hour.includes(slot24h);
+        console.log(`Slot ${slot.time} (${slot24h}) is ${isUnavailable ? 'UNAVAILABLE' : 'AVAILABLE'}`);
+        return !isUnavailable;
       });
 
       const isDateAvailable = availableSlots.length > 0;
@@ -266,7 +282,7 @@ export default function AppointmentScheduleScreen() {
       return {
         ...dateInfo,
         isAvailable: isDateAvailable,
-        bookedSlots: bookedTimesIn24Hour,
+        bookedSlots: unavailableTimesIn24Hour,
       };
     });
 
@@ -277,62 +293,35 @@ export default function AppointmentScheduleScreen() {
   const getAvailableTimeSlots = (): TimeSlot[] => {
     const selectedDateObj = availableDates[selectedDateIndex];
     if (!selectedDateObj) return timeSlots;
-    const bookedTimes = bookedAppointments
+    // Mark both confirmed and blocked as booked/unavailable
+    const unavailableTimes = bookedAppointments
       .filter((apt: any) => {
         let appointmentDate;
-        const utcDate = new Date(apt.appointment_datetime);
-        const year = utcDate.getFullYear();
-        const month = (utcDate.getMonth() + 1).toString().padStart(2, '0');
-        const day = utcDate.getDate().toString().padStart(2, '0');
+        const localDate = new Date(apt.appointment_datetime);
+        const year = localDate.getFullYear();
+        const month = (localDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = localDate.getDate().toString().padStart(2, '0');
         appointmentDate = `${year}-${month}-${day}`;
-        
-        return appointmentDate === selectedDateObj.fullDate;
+        return appointmentDate === selectedDateObj.fullDate && (apt.status === 'confirmed' || apt.status === 'blocked');
       })
       .map((apt: any) => {
-        const utcDate = new Date(apt.appointment_datetime);
-        const hours = utcDate.getUTCHours().toString().padStart(2, '0');
-        const minutes = utcDate.getUTCMinutes().toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
-      })
-      .filter((time: string) => time !== '');
+        const localDate = new Date(apt.appointment_datetime);
+        const hours = localDate.getHours().toString().padStart(2, '0');
+        const minutes = localDate.getMinutes().toString().padStart(2, '0');
+        return {
+          time: `${hours}:${minutes}`,
+          isBlocked: apt.status === 'blocked',
+        };
+      });
     return timeSlots.map((slot, index) => {
       const slot24h = convertTo24Hour(slot.time);
-      const isBooked = bookedTimes.includes(slot24h);
+      const match = unavailableTimes.find((t) => t.time === slot24h);
       return {
         ...slot,
-        isBooked,
+        isBooked: !!match,
+        isBlocked: match ? match.isBlocked : false,
       };
     });
-  };
-
-  const renderTimeSlot = (timeSlot: TimeSlot, index: number) => {
-    const isSelected = timeSlot.time === selectedTime;
-
-    return (
-      <TouchableOpacity
-        key={index}
-        style={[
-          styles.timeSlot,
-          isSelected && !timeSlot.isBooked && styles.selectedTimeSlot,
-          timeSlot.isBooked && styles.bookedTimeSlot,
-        ]}
-        onPress={() => handleTimeSelect(timeSlot.time, index)}
-        disabled={timeSlot.isBooked}
-      >
-        <Text
-          style={[
-            styles.timeText,
-            isSelected && !timeSlot.isBooked && styles.selectedTimeText,
-            timeSlot.isBooked && styles.bookedTimeText,
-          ]}
-        >
-          {timeSlot.time}
-        </Text>
-        {/* {timeSlot.isBooked && (
-          <Text style={styles.bookedLabel}>Booked</Text>
-        )} */}
-      </TouchableOpacity>
-    );
   };
 
   const handleDateSelect = (dayObj: CalendarDay, index: number) => {
@@ -436,7 +425,8 @@ export default function AppointmentScheduleScreen() {
         title: `Consultation with ${selectedConsultant.first_name} ${selectedConsultant.last_name}`,
         description: reasonForVisit,
         appointment_datetime, // UTC ISO string
-        duration_minutes: 90
+        duration_minutes: 90,
+        mood: selectedMoodValue // <-- include mood in appointment
       };
 
       try {
@@ -547,6 +537,18 @@ export default function AppointmentScheduleScreen() {
     return () => clearInterval(interval);
   }, [selectedConsultant, currentYear, currentMonth]);
 
+  // Show mood modal on mount (always, or you can add logic to only show once per appointment)
+  useEffect(() => {
+    setMoodModalVisible(true);
+  }, []);
+
+  // Save mood selection (local only)
+  const handleMoodSelect = (value: number) => {
+    setSelectedMoodValue(value);
+    setMoodMessage(moodMessages[value - 1]);
+    setMoodModalVisible(false);
+  };
+
   const availableSlots = getAvailableTimeSlots();
 
   return (
@@ -640,7 +642,7 @@ export default function AppointmentScheduleScreen() {
                 <ActivityIndicator size="small" color={COLORS.primary} />
               ) : (
                 <View style={styles.timeSlotsGrid}>
-                  {availableSlots.map((timeSlot, index) => renderTimeSlot(timeSlot, index))}
+                  {availableSlots.map((timeSlot, index) => <RenderTimeSlot key={index} timeSlot={timeSlot} index={index} selectedTime={selectedTime} handleTimeSelect={handleTimeSelect} />)}
                 </View>
               )}
             </View>
@@ -677,6 +679,63 @@ export default function AppointmentScheduleScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Mood Selection Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={moodModalVisible}
+        onRequestClose={() => setMoodModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>How do you feel today?</Text>
+            <View style={styles.moodOptions}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[styles.moodOption, selectedMoodValue === value && styles.selectedMoodOption]}
+                  onPress={() => handleMoodSelect(value)}
+                >
+                  <Text style={styles.moodOptionText}>{value}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.moodMessage}>{moodMessage}</Text>
+            <TouchableOpacity style={styles.closeModalButton} onPress={() => setMoodModalVisible(false)}>
+              <Text style={styles.closeModalButtonText}>Skip for now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Mood Modal */}
+      <Modal
+        visible={moodModalVisible}
+        transparent
+        animationType="slide"
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 320, alignItems: 'center' }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: COLORS.textDark }}>How are you feeling today?</Text>
+            <Text style={{ color: COLORS.textSecondary, marginBottom: 20 }}>Select your mood (1 = worst, 10 = best)</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
+              {Array.from({ length: 10 }).map((_, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={{
+                    width: 36, height: 36, borderRadius: 18, margin: 6, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: selectedMoodValue === i + 1 ? COLORS.primary : COLORS.lightGrey,
+                  }}
+                  onPress={() => handleMoodSelect(i + 1)}
+                >
+                  <Text style={{ color: selectedMoodValue === i + 1 ? COLORS.white : COLORS.textDark, fontWeight: 'bold' }}>{i + 1}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
       
     </SafeAreaView>
   );
@@ -879,27 +938,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  timeSlot: {
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minWidth: 60,
-    alignItems: 'center',
-  },
-  selectedTimeSlot: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  timeText: {
-    fontSize: 14,
-    color: COLORS.textDark,
-    fontWeight: '500',
-  },
-  selectedTimeText: {
-    color: COLORS.white,
-    fontWeight: '600',
-  },
   reasonContainer: {
     marginBottom: 24,
   },
@@ -992,17 +1030,72 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  bookedTimeSlot: {
-    backgroundColor: '#ffebee',
-    borderWidth: 1,
-    borderColor: '#ff4444',
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
-  bookedTimeText: {
-    color: '#ff4444',
+  modalContent: {
+    width: '80%',
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  bookedLabel: {
-    fontSize: 10,
-    color: '#ff4444',
-    marginTop: 2,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textDark,
+    marginBottom: 16,
+  },
+  moodOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  moodOption: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.primaryLight,
+    margin: 4,
+  },
+  selectedMoodOption: {
+    backgroundColor: COLORS.primary,
+  },
+  moodOptionText: {
+    fontSize: 16,
+    color: COLORS.textDark,
+    fontWeight: '500',
+  },
+  moodMessage: {
+    fontSize: 14,
+    color: COLORS.textDark,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  closeModalButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  closeModalButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

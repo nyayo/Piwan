@@ -8,49 +8,13 @@ import { router } from 'expo-router';
 
 import COLORS from '../../constants/theme';
 import { useAuth } from '../../context/authContext';
+import { getConsultantAppointments } from '../../services/api';
+import { convertToLocalDate, formatTime } from '../../helper/convertDateTime';
+import truncateWords from '../../helper/truncateWords';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Sample data
-const upcomingAppointments = [
-  {
-    id: 1,
-    patientName: "Sarah Hasten",
-    condition: "Neck Pain",
-    improvement: "60%",
-    date: "Today, May 18",
-    time: "10:00 - 11:40 AM",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    status: "confirmed",
-    location: "Room 302",
-    moodRating: 7
-  },
-  {
-    id: 2,
-    patientName: "John Doe",
-    condition: "Back Pain",
-    improvement: "45%",
-    date: "Today, May 18",
-    time: "2:00 - 3:30 PM",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    status: "confirmed",
-    location: "Room 205",
-    moodRating: 6
-  },
-  {
-    id: 3,
-    patientName: "Emily Chen",
-    condition: "Shoulder Pain",
-    improvement: "75%",
-    date: "Today, May 19",
-    time: "9:00 - 10:30 AM",
-    avatar: "https://i.pravatar.cc/150?img=3",
-    status: "pending",
-    location: "Room 101",
-    moodRating: 8
-  }
-];
-
+// Static data moved above component for scope
 const moodData = [
   { mood: "Excellent", count: 15, color: "#4CAF50", icon: "happy-outline" },
   { mood: "Good", count: 23, color: "#8BC34A", icon: "checkmark-circle-outline" },
@@ -87,34 +51,74 @@ const tabsData = [
   { id: 'reports', title: 'Reports', icon: 'document-text-outline' }
 ];
 
+// Add types for user and appointment
+interface User {
+  id: string | number;
+  first_name?: string;
+  last_name?: string;
+  profile_image?: string;
+  [key: string]: any;
+}
+
+interface Appointment {
+  id: string | number;
+  user_name?: string;
+  profile_image?: string;
+  mood?: number;
+  condition?: string;
+  date?: string;
+  time?: string;
+  status?: string;
+  [key: string]: any;
+}
+
 const ConsultantAdminHome = () => {
-  const {user} = useAuth();
+  const {user}: {user?: User} = useAuth() as {user?: User};
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
-  const flatListRef = useRef(null);
+  const flatListRef = useRef<FlatList<Appointment>>(null);
+  const [confirmedAppointments, setConfirmedAppointments] = useState<Appointment[]>([]);
+
+  useEffect(() => {
+    const fetchConfirmedAppointments = async () => {
+      if (!user?.id) return;
+      try {
+        const filters = { status: 'confirmed', limit: 10 };
+        const result = await getConsultantAppointments(user.id, filters);
+        if (result.success && result.appointments) {
+          setConfirmedAppointments(result.appointments);
+        } else {
+          setConfirmedAppointments([]);
+        }
+      } catch (e) {
+        setConfirmedAppointments([]);
+      }
+    };
+    fetchConfirmedAppointments();
+  }, [user?.id]);
 
   // Auto-scroll carousel
   useEffect(() => {
-    if (upcomingAppointments.length <= 1) return;
+    if (confirmedAppointments.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIndex(prev => {
-        const nextIndex = prev + 1 >= upcomingAppointments.length ? 0 : prev + 1;
+        const nextIndex = prev + 1 >= confirmedAppointments.length ? 0 : prev + 1;
         flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
         return nextIndex;
       });
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [confirmedAppointments]);
 
   const handleNotificationPress = () => {
     router.push('/(screens)/consultants/notificationScreen')
   }
 
-  const handleChatPress = (appointment) => {
-    console.log('Starting chat with:', appointment.patientName);
+  const handleChatPress = (appointment: Appointment) => {
+    console.log('Starting chat with:', appointment.user_name);
   };
 
-  const renderAppointmentCard = ({ item }) => (
+  const renderAppointmentCard = ({ item }: { item: Appointment }) => (
     <View style={styles.appointmentCarouselCard}>
       <View style={styles.cardHeader}>
         <View style={styles.statusBadge}>
@@ -124,19 +128,19 @@ const ConsultantAdminHome = () => {
         </View>
         <View style={styles.moodIndicator}>
           <Ionicons 
-            name={item.moodRating >= 7 ? "happy" : item.moodRating >= 5 ? "happy-outline" : "sad-outline"} 
+            name={((item.mood ?? 0) >= 7 ? "happy" : (item.mood ?? 0) >= 5 ? "happy-outline" : "sad-outline") as any} 
             size={16} 
-            color={item.moodRating >= 7 ? "#4CAF50" : item.moodRating >= 5 ? "#FFC107" : "#F44336"} 
+            color={(item.mood ?? 0) >= 7 ? "#4CAF50" : (item.mood ?? 0) >= 5 ? "#FFC107" : "#F44336"} 
           />
-          <Text style={styles.moodText}>{item.moodRating}/10</Text>
+          <Text style={styles.moodText}>{item.mood !== undefined ? item.mood : '-'} /10</Text>
         </View>
       </View>
       
       <View style={styles.patientSection}>
-        <Image source={{ uri: item.avatar }} style={styles.patientAvatar} />
+        <Image source={{ uri: item.profile_image }} style={styles.patientAvatar} />
         <View style={styles.patientInfo}>
-          <Text style={styles.patientName}>{item.patientName}</Text>
-          <Text style={styles.conditionText}>{item.condition}</Text>
+          <Text style={styles.patientName}>{item.user_name}</Text>
+          <Text style={styles.conditionText}>{truncateWords({ text: item.description, maxWords: 5 })}</Text>
         </View>
         <TouchableOpacity 
           style={styles.chatButton}
@@ -149,11 +153,11 @@ const ConsultantAdminHome = () => {
       <View style={styles.dateTimeContainer}>
         <View style={styles.dateTime}>
           <Ionicons name="calendar-outline" size={20} color={COLORS.textPrimary} />
-          <Text style={styles.appointmentDate}>{item.date}</Text>
+          <Text style={styles.appointmentDate}>{convertToLocalDate(item.appointment_datetime)}</Text>
         </View>
         <View style={styles.dateTime}>
           <Ionicons name="time-outline" size={20} color={COLORS.textPrimary} />
-          <Text style={styles.appointmentTime}>{item.time}</Text>
+          <Text style={styles.appointmentTime}>{formatTime(item.appointment_datetime)}</Text>
         </View>
       </View>
     </View>
@@ -240,7 +244,7 @@ const ConsultantAdminHome = () => {
       {moodData.map((mood, index) => (
         <View key={index} style={styles.moodItem}>
           <View style={styles.moodLeft}>
-            <Ionicons name={mood.icon} size={24} color={mood.color} />
+            <Ionicons name={mood.icon as any} size={24} color={mood.color} />
             <Text style={styles.moodLabel}>{mood.mood}</Text>
           </View>
           <View style={styles.moodRight}>
@@ -433,7 +437,7 @@ const ConsultantAdminHome = () => {
             
             <FlatList
               ref={flatListRef}
-              data={upcomingAppointments}
+              data={confirmedAppointments}
               renderItem={renderAppointmentCard}
               keyExtractor={(item) => item.id.toString()}
               horizontal
@@ -441,7 +445,9 @@ const ConsultantAdminHome = () => {
               snapToInterval={screenWidth - 32}
               decelerationRate="fast"
               snapToAlignment="center"
-              contentContainerStyle={styles.carouselContainer}
+              contentContainerStyle={{
+                paddingHorizontal: confirmedAppointments.length === 1 ? 0 : 16
+              }}
               pagingEnabled={true}
               onMomentumScrollEnd={e => {
                 const newIndex = Math.round(e.nativeEvent.contentOffset.x / (screenWidth - 32));
@@ -451,7 +457,7 @@ const ConsultantAdminHome = () => {
             
             {/* Pagination Dots */}
             <View style={styles.paginationContainer}>
-              {upcomingAppointments.map((_, index) => (
+              {confirmedAppointments.map((_, index) => (
                 <View
                   key={index}
                   style={[
@@ -480,7 +486,7 @@ const ConsultantAdminHome = () => {
                   onPress={() => setActiveTab(tab.id)}
                 >
                   <Ionicons 
-                    name={tab.icon} 
+                    name={tab.icon as any} 
                     size={20} 
                     color={activeTab === tab.id ? COLORS.white : COLORS.textSecondary} 
                   />

@@ -7,7 +7,8 @@ const BlockTimeModal = ({
         showBlockTimeModal, 
         setShowBlockTimeModal, 
         blockTimeData, 
-        setBlockTimeData
+        setBlockTimeData,
+        onConfirm
     }) => {
     return (
         <Modal
@@ -56,7 +57,7 @@ const BlockTimeModal = ({
                         />
                     </View>
                     
-                    <TouchableOpacity style={styles.blockTimeButton}>
+                    <TouchableOpacity style={styles.blockTimeButton} onPress={onConfirm}>
                         <Text style={styles.blockTimeButtonText}>Block Time</Text>
                     </TouchableOpacity>
                 </View>

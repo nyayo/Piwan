@@ -1,8 +1,8 @@
-import { createAppointment, getAppointments, updateStatus, consultantReview, getConsultantAvailability, fetchConsultantReviewsPaginated, cancelExpiredAppointments } from "../services/AppointmentServices.js"
+import { createAppointment, getAppointments, updateStatus, consultantReview, getConsultantAvailability, fetchConsultantReviewsPaginated, cancelExpiredAppointments, blockAppointmentSlot, confirmAppointment, rejectAppointment, rescheduleAppointment } from "../services/AppointmentServices.js"
 import { logActivity } from "../routes/activityRoutes.js";
 
 export const create = async(req, res) => {
-    const { consultant_id, title, description, appointment_datetime, duration_minutes } = req.body;
+    const { consultant_id, title, description, appointment_datetime, duration_minutes, mood } = req.body;
     const user_id = req.user.id;
 
     if (req.user.role !== 'user') {
@@ -22,7 +22,8 @@ export const create = async(req, res) => {
         title: title || 'Consultation', 
         description, 
         appointment_datetime, 
-        duration_minutes 
+        duration_minutes,
+        mood // Pass mood to service
     };
 
     try {
@@ -229,3 +230,112 @@ export const getConsultantReviewsPaginated = async (req, res) => {
         });
     }
 };
+
+// Block a slot for a consultant
+export const blockSlot = async (req, res) => {
+    if (req.user.role !== 'consultant') {
+        return res.status(403).json({ success: false, message: 'Only consultants can block slots' });
+    }
+    const { appointment_datetime, duration_minutes } = req.body;
+    const consultant_id = req.user.id;
+    if (!appointment_datetime) {
+        return res.status(400).json({ success: false, message: 'appointment_datetime is required' });
+    }
+    try {
+        const result = await blockAppointmentSlot({ consultant_id, appointment_datetime, duration_minutes });
+        if (result.success) {
+            return res.status(201).json(result);
+        } else {
+            return res.status(400).json(result);
+        }
+    } catch (error) {
+        console.error('Error in blockSlot controller:', error);
+        return res.status(500).json({ success: false, message: 'Failed to block slot' });
+    }
+};
+
+// Confirm a pending appointment (consultant only)
+export const confirm = async (req, res) => {
+    const appointmentId = req.params.id;
+    const consultantId = req.user.id;
+    if (req.user.role !== 'consultant') {
+        return res.status(403).json({ success: false, message: 'Only consultants can confirm appointments' });
+    }
+    try {
+        const result = await confirmAppointment(consultantId, appointmentId);
+        if (result.success) {
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json(result);
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to confirm appointment.' });
+    }
+};
+
+// Reject a pending appointment (consultant only)
+export const reject = async (req, res) => {
+    const appointmentId = req.params.id;
+    const consultantId = req.user.id;
+    if (req.user.role !== 'consultant') {
+        return res.status(403).json({ success: false, message: 'Only consultants can reject appointments' });
+    }
+    try {
+        const result = await rejectAppointment(consultantId, appointmentId);
+        if (result.success) {
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json(result);
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to reject appointment.' });
+    }
+};
+
+// Reschedule an appointment (user or consultant)
+export const reschedule = async (req, res) => {
+    const appointmentId = req.params.id;
+    const { new_datetime } = req.body;
+    const userId = req.user.id;
+    const userType = req.user.role;
+    if (!new_datetime) {
+        return res.status(400).json({ success: false, message: "New datetime is required" });
+    }
+    try {
+        const result = await rescheduleAppointment(userId, userType, appointmentId, new_datetime);
+        if (result.success) {
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json(result);
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Failed to reschedule appointment." });
+    }
+};
+
+// Cancel an appointment (user or consultant)
+export const cancel = async (req, res) => {
+    const appointmentId = req.params.id;
+    const { cancellation_reason } = req.body;
+    const userId = req.user.id;
+    const userType = req.user.role;
+    if (!appointmentId) {
+        return res.status(400).json({ success: false, message: 'Appointment ID is required' });
+    }
+    try {
+        // Only allow cancel if user is owner or consultant
+        const statusUpdate = { status: 'cancelled', cancellation_reason };
+        const response = await updateStatus(userId, userType, appointmentId, statusUpdate);
+        if (response.success) {
+            return res.status(200).json(response);
+        } else {
+            return res.status(400).json(response);
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to cancel appointment. Please try again later.' });
+    }
+};
+
+// In your Express router (e.g. routes/appointmentRoutes.js):
+// Add this route if not already present
+//
