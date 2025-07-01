@@ -12,7 +12,8 @@ import {
   SafeAreaView,
   Animated,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome6, Ionicons } from '@expo/vector-icons';
+import COLORS from '../../../constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -94,6 +95,12 @@ const PublRealtyHomeScreen = () => {
     extrapolate: 'clamp',
   });
 
+  const searchBarTranslateY = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
+    outputRange: [0, -145],
+    extrapolate: 'clamp',
+  });
+
   // Logo animations - fade out completely
   const logoOpacity = scrollY.interpolate({
     inputRange: [0, HEADER_SCROLL_DISTANCE / 2, HEADER_SCROLL_DISTANCE],
@@ -156,7 +163,10 @@ const PublRealtyHomeScreen = () => {
       </Animated.View>
 
       {/* Search Bar - Fixed at top */}
-      <View style={styles.searchContainerTop}>
+      <Animated.View style={[styles.searchContainerTop,  {
+            opacity: 1,
+            transform: [{ translateY: searchBarTranslateY }]
+          } ]}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
           <TextInput
@@ -165,7 +175,7 @@ const PublRealtyHomeScreen = () => {
             style={styles.searchInput}
           />
         </View>
-      </View>
+      </Animated.View>
 
       <Animated.ScrollView
         style={styles.content}
@@ -258,23 +268,34 @@ const PublRealtyHomeScreen = () => {
                 <View style={styles.propertyInfo}>
                   <Text style={styles.propertyPrice}>{property.price}</Text>
                   <View style={styles.propertyDetailItem}>
-                    <Ionicons name="location" size={14} color="#6B7280" />
-                    <Text style={styles.propertyDetailText}>{property.location}</Text>
-                  </View>
-                  <View style={styles.propertyDetailItem}>
-                    <Ionicons name="resize" size={14} color="#6B7280" />
-                    <Text style={styles.propertyDetailText}>{property.size}</Text>
+                    <View style={styles.propertyDetail}>
+                      <Ionicons name="location" size={14} color="#6B7280" />
+                      <Text style={styles.propertyDetailText}>{property.location}</Text>
+                    </View>
+                    <View style={styles.propertyDetail}>
+                      <Ionicons name="resize" size={14} color="#6B7280" />
+                      <Text style={styles.propertyDetailText}>{property.size}</Text>
+                    </View>
                   </View>
                   
                   <View style={styles.amenitiesContainer}>
                     <View style={styles.amenityBadge}>
-                      <Text style={styles.amenityText}>🛏️ {property.beds} Beds</Text>
+                      <Ionicons name="bed" size={22} color="#EA580C" />
+                      <Text style={styles.amenityText}>
+                        {property.beds} Beds
+                      </Text>
                     </View>
                     <View style={styles.amenityBadge}>
-                      <Text style={styles.amenityText}>🛁 {property.baths} Baths</Text>
+                      <FontAwesome6 name="bath" size={18} color="#EA580C" />
+                      <Text style={styles.amenityText}>
+                        {property.baths} Baths
+                      </Text>
                     </View>
                     <View style={styles.amenityBadge}>
-                      <Text style={styles.amenityText}>🚗 {property.parking} Parking</Text>
+                      <Ionicons name="car-sharp" size={22} color="#EA580C" />
+                      <Text style={styles.amenityText}>
+                        {property.parking} Parking
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -374,8 +395,8 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     position: 'absolute',
-    top: 60,
-    left: 24,
+    top: 80,
+    left: width * 0.35,
   },
   logoText: {
     flexDirection: 'row',
@@ -383,7 +404,7 @@ const styles = StyleSheet.create({
   },
   logoOrange: {
     color: '#FB923C',
-    fontSize: 24,
+    fontSize: 42,
     fontWeight: 'bold',
   },
   logoWhite: {
@@ -398,7 +419,7 @@ const styles = StyleSheet.create({
   },
   searchContainerTop: {
     position: 'absolute',
-    top: 50, // Position at top of screen (below status bar)
+    top: 170, // Position at top of screen (below status bar)
     left: 24,
     right: 24,
     zIndex: 30, // Higher than header
@@ -513,11 +534,15 @@ const styles = StyleSheet.create({
   propertyCard: {
     backgroundColor: 'white',
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.20,
+    shadowRadius: 1.41,
+
+    elevation: 2,
     marginBottom: 16,
     overflow: 'hidden',
   },
@@ -548,30 +573,40 @@ const styles = StyleSheet.create({
   propertyDetailItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  propertyDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
   },
   propertyDetailText: {
     color: '#6B7280',
     fontSize: 14,
     marginLeft: 4,
+    fontWeight: '500'
   },
   amenitiesContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: 10,
+    borderTopWidth: 1,
+    paddingTop: 10,
+    borderColor: COLORS.lightGrey
   },
   amenityBadge: {
-    backgroundColor: '#FFF7ED',
-    paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
     flex: 1,
-    marginHorizontal: 2,
+    // marginHorizontal: 2,
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5
   },
   amenityText: {
     color: '#EA580C',
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '500'
   },
   cityContainer: {
     flexDirection: 'row',

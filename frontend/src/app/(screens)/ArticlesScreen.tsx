@@ -1,50 +1,46 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import COLORS from '../../constants/theme';
 
-const articles = [
-  {
-    id: '1',
-    title: 'Understanding Anxiety',
-    description: 'Learn about the causes, symptoms, and coping strategies for anxiety disorders.',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-    gradient: ['#4facfe', '#00f2fe'],
-    url: 'https://www.example.com/anxiety-article.pdf',
-  },
-  {
-    id: '2',
-    title: 'Mindfulness Techniques',
-    description: 'Explore practical mindfulness exercises to improve your mental well-being.',
-    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80',
-    gradient: ['#43e97b', '#38f9d7'],
-    url: 'https://www.example.com/mindfulness-article.pdf',
-  },
-  {
-    id: '3',
-    title: 'Building Resilience',
-    description: 'Tips and strategies to help you build emotional resilience in daily life.',
-    image: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=400&q=80',
-    gradient: ['#fa709a', '#fee140'],
-    url: 'https://www.example.com/resilience-article.pdf',
-  },
-];
+interface Resource {
+  id: number;
+  title: string;
+  description: string;
+  image?: string;
+  preview_image_url?: string;
+  file_url: string;
+  type: string;
+  [key: string]: any;
+}
 
 const ArticlesScreen = () => {
-  const renderItem = ({ item }) => (
+  const params = useLocalSearchParams();
+  const resources: Resource[] | null = useMemo(() => {
+    if (params.resources) {
+      try {
+        return JSON.parse(params.resources as string);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [params.resources]);
+
+  const renderItem = ({ item }: { item: Resource }) => (
     <TouchableOpacity
       key={item.id}
       style={styles.card}
       activeOpacity={0.85}
       onPress={() => router.push({
         pathname: '/(screens)/ResourceViewerScreen',
-        params: { title: item.title, url: item.url }
+        params: { title: item.title, file_url: item.file_url }
       })}
     >
       <View style={styles.cardBody}>
-        <Image source={{ uri: item.image }} style={styles.thumbnailRow} />
+        <Image source={{ uri: item.preview_image_url || item.image || undefined }} style={styles.thumbnailRow} />
         <Text style={styles.cardTitleRow}>{item.title}</Text>
         <Text style={styles.cardDescriptionRow}>{item.description}</Text>
         <TouchableOpacity
@@ -76,15 +72,25 @@ const ArticlesScreen = () => {
           <Text style={styles.headerDescription}>Read and download insightful articles on mental wellness and coping strategies.</Text>
         </View>
       </View>
-      <FlatList
-        data={articles}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.cardRow}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      />
+      {!resources ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : resources.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: COLORS.grey, fontSize: 16 }}>No articles found.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={resources}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.cardRow}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 };

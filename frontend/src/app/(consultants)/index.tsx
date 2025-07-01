@@ -1,57 +1,24 @@
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, Dimensions, ActivityIndicator } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { router } from 'expo-router';
+import { LineChart } from 'react-native-chart-kit';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { fetchResources } from '../../services/api';
 
 import COLORS from '../../constants/theme';
 import { useAuth } from '../../context/authContext';
-import { getConsultantAppointments } from '../../services/api';
+import { getConsultantAppointments, getConsultantReviewsPaginated } from '../../services/api';
 import { convertToLocalDate, formatTime } from '../../helper/convertDateTime';
 import truncateWords from '../../helper/truncateWords';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Static data moved above component for scope
-const moodData = [
-  { mood: "Excellent", count: 15, color: "#4CAF50", icon: "happy-outline" },
-  { mood: "Good", count: 23, color: "#8BC34A", icon: "checkmark-circle-outline" },
-  { mood: "Neutral", count: 18, color: "#FFC107", icon: "remove-circle-outline" },
-  { mood: "Poor", count: 8, color: "#FF9800", icon: "sad-outline" },
-  { mood: "Critical", count: 3, color: "#F44336", icon: "alert-circle-outline" }
-];
-
-const resourcesData = {
-  podcasts: 24,
-  music: 18,
-  videos: 12,
-  articles: 35,
-  exercises: 28
-};
-
-const reviewsData = {
-  averageRating: 4.8,
-  totalReviews: 324,
-  ratingDistribution: [
-    { stars: 5, count: 280 },
-    { stars: 4, count: 32 },
-    { stars: 3, count: 8 },
-    { stars: 2, count: 3 },
-    { stars: 1, count: 1 }
-  ]
-};
-
-const tabsData = [
-  { id: 'overview', title: 'Overview', icon: 'grid-outline' },
-  { id: 'mood', title: 'Mood Tracker', icon: 'happy-outline' },
-  { id: 'resources', title: 'Resources', icon: 'library-outline' },
-  { id: 'reviews', title: 'Reviews', icon: 'star-outline' },
-  { id: 'reports', title: 'Reports', icon: 'document-text-outline' }
-];
-
-// Add types for user and appointment
+// Add types for user, appointment, review, and review stats
 interface User {
   id: string | number;
   first_name?: string;
@@ -72,12 +39,78 @@ interface Appointment {
   [key: string]: any;
 }
 
+interface Review {
+  id: string | number;
+  user_name?: string;
+  user_profile_image?: string;
+  rating: number;
+  review_text?: string;
+  created_at: string;
+}
+
+interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
+  ratingDistribution: { stars: number; count: number }[];
+}
+
+const tabsData = [
+  { id: 'overview', title: 'Overview', icon: 'grid-outline' },
+  { id: 'mood', title: 'Mood Tracker', icon: 'happy-outline' },
+  { id: 'resources', title: 'Resources', icon: 'library-outline' },
+  { id: 'reviews', title: 'Reviews', icon: 'star-outline' },
+  { id: 'reports', title: 'Reports', icon: 'document-text-outline' }
+];
+
+// Resource type for backend resource objects
+interface Resource {
+  id: number;
+  title: string;
+  description: string;
+  type: string;
+  file_url: string;
+  preview_image_url?: string;
+  [key: string]: any;
+}
+
 const ConsultantAdminHome = () => {
   const {user}: {user?: User} = useAuth() as {user?: User};
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
   const flatListRef = useRef<FlatList<Appointment>>(null);
   const [confirmedAppointments, setConfirmedAppointments] = useState<Appointment[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewStats, setReviewStats] = useState<ReviewStats>({ averageRating: 0, totalReviews: 0, ratingDistribution: [] });
+  const [moodDistribution, setMoodDistribution] = useState([
+    { mood: "Excellent", count: 0, color: "#4CAF50", icon: "happy-outline" },
+    { mood: "Good", count: 0, color: "#8BC34A", icon: "checkmark-circle-outline" },
+    { mood: "Neutral", count: 0, color: "#FFC107", icon: "remove-circle-outline" },
+    { mood: "Poor", count: 0, color: "#FF9800", icon: "sad-outline" },
+    { mood: "Critical", count: 0, color: "#F44336", icon: "alert-circle-outline" }
+  ]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(true);
+  const [resourcesError, setResourcesError] = useState(null);
+  // Add state for mood trends
+  const [moodTrends, setMoodTrends] = useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] });
+
+  useEffect(() => {
+  const loadResources = async () => {
+    setResourcesLoading(true);
+    setResourcesError(null);
+    try {
+      const data = await fetchResources();
+      console.log('Fetched resources:', data);
+      setResources(data.resources || []);
+    } catch (err) {
+      console.log('Resource fetch error:', err);
+      setResourcesError('Failed to load resources.');
+    } finally {
+      setResourcesLoading(false);
+    }
+  };
+  loadResources();
+}, []);
 
   useEffect(() => {
     const fetchConfirmedAppointments = async () => {
@@ -110,6 +143,120 @@ const ConsultantAdminHome = () => {
     return () => clearInterval(interval);
   }, [confirmedAppointments]);
 
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!user?.id) return;
+      try {
+        const result = await getConsultantReviewsPaginated(user.id, 1, 10, 'created_at', 'DESC');
+        if (result.success && result.reviews) {
+          setReviews(result.reviews);
+          // Calculate stats
+          const totalReviews = result.pagination?.total || result.reviews.length;
+          const averageRating = result.reviews.length
+            ? result.reviews.reduce((sum: number, r: Review) => sum + (r.rating || 0), 0) / result.reviews.length
+            : 0;
+          // Distribution: count of each star (1-5)
+          const ratingDistribution = [5,4,3,2,1].map(star => ({
+            stars: star,
+            count: result.reviews.filter((r: Review) => r.rating === star).length
+          }));
+          setReviewStats({ averageRating, totalReviews, ratingDistribution });
+        } else {
+          setReviews([]);
+          setReviewStats({ averageRating: 0, totalReviews: 0, ratingDistribution: [] });
+        }
+      } catch (e) {
+        setReviews([]);
+        setReviewStats({ averageRating: 0, totalReviews: 0, ratingDistribution: [] });
+      }
+    };
+    fetchReviews();
+  }, [user?.id]);
+
+  useEffect(() => {
+    const fetchMoodDistribution = async () => {
+      if (!user?.id) return;
+      try {
+        // Fetch all confirmed appointments (limit high for summary)
+        const filters = { status: 'confirmed', limit: 100 };
+        const result = await getConsultantAppointments(user.id, filters);
+        if (result.success && result.appointments) {
+          // Aggregate moods
+          const moods = result.appointments.map((apt: any) => apt.mood).filter((m: any) => typeof m === 'number');
+          // Map moods to buckets
+          const buckets = [
+            { mood: "Excellent", count: 0, color: "#4CAF50", icon: "happy-outline", range: [9, 10] },
+            { mood: "Good", count: 0, color: "#8BC34A", icon: "checkmark-circle-outline", range: [7, 8] },
+            { mood: "Neutral", count: 0, color: "#FFC107", icon: "remove-circle-outline", range: [5, 6] },
+            { mood: "Poor", count: 0, color: "#FF9800", icon: "sad-outline", range: [3, 4] },
+            { mood: "Critical", count: 0, color: "#F44336", icon: "alert-circle-outline", range: [1, 2] }
+          ];
+          moods.forEach((m: number) => {
+            if (m >= 9) buckets[0].count++;
+            else if (m >= 7) buckets[1].count++;
+            else if (m >= 5) buckets[2].count++;
+            else if (m >= 3) buckets[3].count++;
+            else if (m >= 1) buckets[4].count++;
+          });
+          setMoodDistribution(buckets.map(({ range, ...rest }) => rest));
+        } else {
+          setMoodDistribution(moodDistribution.map(md => ({ ...md, count: 0 })));
+        }
+      } catch (e) {
+        setMoodDistribution(moodDistribution.map(md => ({ ...md, count: 0 })));
+      }
+    };
+    fetchMoodDistribution();
+  }, [user?.id]);
+
+  // Helper: Aggregate average mood per week
+  function getMoodTrends(appointments: Appointment[], period: 'week' | 'month' = 'week') {
+    if (!appointments || appointments.length === 0) return { labels: [], data: [] };
+    // Group by week or month
+    const groups: { [key: string]: { sum: number; count: number } } = {};
+    appointments.forEach((apt) => {
+      if (typeof apt.mood !== 'number' || !apt.appointment_datetime) return;
+      const date = new Date(apt.appointment_datetime);
+      let key = '';
+      if (period === 'week') {
+        // Get year-week string
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+        const week = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+        key = `${date.getFullYear()}-W${week}`;
+      } else {
+        key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      }
+      if (!groups[key]) groups[key] = { sum: 0, count: 0 };
+      groups[key].sum += apt.mood;
+      groups[key].count++;
+    });
+    // Sort keys
+    const sortedKeys = Object.keys(groups).sort();
+    return {
+      labels: sortedKeys,
+      data: sortedKeys.map((k) => groups[k].count ? parseFloat((groups[k].sum / groups[k].count).toFixed(2)) : 0),
+    };
+  }
+
+  // Update mood trends when confirmedAppointments change
+  useEffect(() => {
+    setMoodTrends(getMoodTrends(confirmedAppointments, 'week'));
+  }, [confirmedAppointments]);
+
+  // Export moods as CSV
+  const handleExportMoodCSV = async () => {
+    if (!confirmedAppointments.length) return;
+    let csv = 'Date,Patient,Mood\n';
+    confirmedAppointments.forEach((apt) => {
+      const date = apt.appointment_datetime ? new Date(apt.appointment_datetime).toLocaleDateString() : '';
+      csv += `${date},${apt.user_name || ''},${apt.mood ?? ''}\n`;
+    });
+    const fileUri = FileSystem.cacheDirectory + 'mood_data.csv';
+    await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
+    await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', dialogTitle: 'Export Mood Data' });
+  };
+
   const handleNotificationPress = () => {
     router.push('/(screens)/consultants/notificationScreen')
   }
@@ -117,7 +264,9 @@ const ConsultantAdminHome = () => {
   const handleChatPress = (appointment: Appointment) => {
     console.log('Starting chat with:', appointment.user_name);
   };
-
+  const handleViewAllReviews = () => {
+    router.push('/(screens)/allReviews');
+  };
   const renderAppointmentCard = ({ item }: { item: Appointment }) => (
     <View style={styles.appointmentCarouselCard}>
       <View style={styles.cardHeader}>
@@ -238,118 +387,145 @@ const ConsultantAdminHome = () => {
     </View>
   );
 
-  const renderMoodTab = () => (
-    <View style={styles.tabContent}>
-      <Text style={styles.tabTitle}>Patient Mood Distribution</Text>
-      {moodData.map((mood, index) => (
-        <View key={index} style={styles.moodItem}>
-          <View style={styles.moodLeft}>
-            <Ionicons name={mood.icon as any} size={24} color={mood.color} />
-            <Text style={styles.moodLabel}>{mood.mood}</Text>
-          </View>
-          <View style={styles.moodRight}>
-            <View style={[styles.moodBar, { backgroundColor: mood.color + '20' }]}>
-              <View 
-                style={[
-                  styles.moodBarFill, 
-                  { 
-                    backgroundColor: mood.color, 
-                    width: `${(mood.count / 67) * 100}%` 
-                  }
-                ]} 
-              />
+  const renderMoodTab = () => {
+    const total = moodDistribution.reduce((sum, m) => sum + m.count, 0) || 1;
+    return (
+      <View style={styles.tabContent}>
+        <Text style={styles.tabTitle}>Patient Mood Distribution</Text>
+        {moodDistribution.map((mood, index) => (
+          <View key={index} style={styles.moodItem}>
+            <View style={styles.moodLeft}>
+              <Ionicons name={mood.icon as any} size={24} color={mood.color} />
+              <Text style={styles.moodLabel}>{mood.mood}</Text>
             </View>
-            <Text style={styles.moodCount}>{mood.count}</Text>
+            <View style={styles.moodRight}>
+              <View style={[styles.moodBar, { backgroundColor: mood.color + '20' }]}> 
+                <View 
+                  style={[styles.moodBarFill, { backgroundColor: mood.color, width: `${(mood.count / total) * 100}%` }]} 
+                />
+              </View>
+              <Text style={styles.moodCount}>{mood.count}</Text>
+            </View>
           </View>
-        </View>
-      ))}
-      
-      <TouchableOpacity style={styles.actionButton}>
-        <Ionicons name="analytics-outline" size={20} color={COLORS.white} />
-        <Text style={styles.actionButtonText}>View Detailed Analytics</Text>
-      </TouchableOpacity>
-    </View>
-  );
+        ))}
+        {/* Mood Trends Chart */}
+        <Text style={[styles.tabTitle, { marginTop: 24 }]}>Mood Trends Over Time</Text>
+        {moodTrends.labels.length > 0 ? (
+          <LineChart
+            data={{
+              labels: moodTrends.labels,
+              datasets: [{ data: moodTrends.data }],
+            }}
+            width={screenWidth - 48}
+            height={220}
+            yAxisSuffix="/10"
+            chartConfig={{
+              backgroundColor: '#fff',
+              backgroundGradientFrom: '#fff',
+              backgroundGradientTo: '#fff',
+              decimalPlaces: 1,
+              color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0,0,0,${opacity})`,
+              style: { borderRadius: 16 },
+              propsForDots: { r: '4', strokeWidth: '2', stroke: '#4CAF50' },
+            }}
+            bezier
+            style={{ marginVertical: 8, borderRadius: 16 }}
+          />
+        ) : (
+          <Text style={{ color: '#888', marginBottom: 16 }}>Not enough data for trends.</Text>
+        )}
+        {/* Export Button */}
+        <TouchableOpacity style={styles.actionButton} onPress={handleExportMoodCSV}>
+          <Ionicons name="download-outline" size={20} color={COLORS.white} />
+          <Text style={styles.actionButtonText}>Export Mood Data (CSV)</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
-  const renderResourcesTab = () => (
-    <View style={styles.tabContent}>
-      <Text style={styles.tabTitle}>Your Resources Library</Text>
-      
-      <View style={styles.resourceGrid}>
-        <View style={styles.resourceCard}>
-          <Ionicons name="mic-outline" size={32} color="#E91E63" />
-          <Text style={styles.resourceCount}>{resourcesData.podcasts}</Text>
-          <Text style={styles.resourceLabel}>Podcasts</Text>
-        </View>
-        <View style={styles.resourceCard}>
-          <Ionicons name="musical-notes-outline" size={32} color="#9C27B0" />
-          <Text style={styles.resourceCount}>{resourcesData.music}</Text>
-          <Text style={styles.resourceLabel}>Music</Text>
-        </View>
+  const renderResourcesTab = () => {
+    // Only show these categories
+    const categories: Array<{ id: keyof typeof typeMap; label: string; icon: string; color: string }> = [
+      { id: 'audio', label: 'Audio', icon: 'headset-outline', color: '#f093fb' },
+      { id: 'music', label: 'Music', icon: 'musical-notes-outline', color: '#9C27B0' },
+      { id: 'books', label: 'Books', icon: 'book-outline', color: '#667eea' },
+      { id: 'articles', label: 'Articles', icon: 'document-text-outline', color: '#4CAF50' },
+      { id: 'routines', label: 'Routine', icon: 'alarm-outline', color: '#43e97b' },
+      { id: 'podcasts', label: 'Podcasts', icon: 'mic-outline', color: '#E91E63' },
+    ];
+    // Map backend types
+    const typeMap = {
+      audio: 'audio',
+      music: 'music',
+      books: 'book',
+      articles: 'article',
+      routines: 'routine',
+      podcasts: 'podcast',
+    } as const;
+    return (
+      <View style={styles.tabContent}>
+        <Text style={styles.tabTitle}>Your Resources Library</Text>
+        {resourcesLoading ? (
+          <View style={{ alignItems: 'center', padding: 32 }}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : resourcesError ? (
+          <Text style={{ color: COLORS.error, textAlign: 'center', marginVertical: 16 }}>{resourcesError}</Text>
+        ) : (
+          <>
+            <View style={styles.resourceGrid}>
+              {categories.map((cat) => {
+                const count = resources.filter(r => r.type === typeMap[cat.id]).length;
+                return (
+                  <View key={cat.id} style={styles.resourceCard}>
+                    <Ionicons name={cat.icon as any} size={32} color={cat.color} />
+                    <Text style={styles.resourceCount}>{count}</Text>
+                    <Text style={styles.resourceLabel}>{cat.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/(screens)/consultants/resourceLibrary')}
+            >
+              <Ionicons name="cloud-upload-outline" size={20} color={COLORS.white} />
+              <Text style={styles.actionButtonText}>Upload New Resource</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
-      
-      <View style={styles.resourceGrid}>
-        <View style={styles.resourceCard}>
-          <Ionicons name="play-circle-outline" size={32} color="#2196F3" />
-          <Text style={styles.resourceCount}>{resourcesData.videos}</Text>
-          <Text style={styles.resourceLabel}>Videos</Text>
-        </View>
-        <View style={styles.resourceCard}>
-          <Ionicons name="document-text-outline" size={32} color="#4CAF50" />
-          <Text style={styles.resourceCount}>{resourcesData.articles}</Text>
-          <Text style={styles.resourceLabel}>Articles</Text>
-        </View>
-      </View>
-      
-      <View style={styles.resourceGrid}>
-        <View style={styles.resourceCard}>
-          <Ionicons name="fitness-outline" size={32} color="#FF9800" />
-          <Text style={styles.resourceCount}>{resourcesData.exercises}</Text>
-          <Text style={styles.resourceLabel}>Exercises</Text>
-        </View>
-        <View style={styles.resourceCard}>
-          <Ionicons name="add-circle-outline" size={32} color={COLORS.primary} />
-          <Text style={styles.resourceCount}>+</Text>
-          <Text style={styles.resourceLabel}>Add New</Text>
-        </View>
-      </View>
-      
-      <TouchableOpacity style={styles.actionButton}>
-        <Ionicons name="cloud-upload-outline" size={20} color={COLORS.white} />
-        <Text style={styles.actionButtonText}>Upload New Resource</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   const renderReviewsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.tabTitle}>Patient Reviews & Ratings</Text>
-      
       <View style={styles.ratingOverview}>
         <View style={styles.ratingLeft}>
-          <Text style={styles.averageRating}>{reviewsData.averageRating}</Text>
+          <Text style={styles.averageRating}>{reviewStats.averageRating.toFixed(1)}</Text>
           <View style={styles.starsContainer}>
             {[1, 2, 3, 4, 5].map((star) => (
               <Ionicons 
                 key={star} 
                 name="star" 
                 size={20} 
-                color={star <= Math.floor(reviewsData.averageRating) ? "#FFD700" : "#E0E0E0"} 
+                color={star <= Math.floor(reviewStats.averageRating) ? "#FFD700" : "#E0E0E0"} 
               />
             ))}
           </View>
-          <Text style={styles.totalReviews}>{reviewsData.totalReviews} reviews</Text>
+          <Text style={styles.totalReviews}>{reviewStats.totalReviews} reviews</Text>
         </View>
-        
         <View style={styles.ratingRight}>
-          {reviewsData.ratingDistribution.map((rating, index) => (
+          {reviewStats.ratingDistribution.map((rating, index) => (
             <View key={index} style={styles.ratingRow}>
               <Text style={styles.starLabel}>{rating.stars}★</Text>
               <View style={styles.ratingBarContainer}>
                 <View 
                   style={[
                     styles.ratingBarFill, 
-                    { width: `${(rating.count / reviewsData.totalReviews) * 100}%` }
+                    { width: `${(reviewStats.totalReviews ? (rating.count / reviewStats.totalReviews) * 100 : 0)}%` }
                   ]} 
                 />
               </View>
@@ -358,8 +534,26 @@ const ConsultantAdminHome = () => {
           ))}
         </View>
       </View>
-      
-      <TouchableOpacity style={styles.actionButton}>
+      {/* List of reviews */}
+      <ScrollView style={{ maxHeight: 200, marginTop: 16 }}>
+        {reviews.length === 0 ? (
+          <Text style={{ color: '#888', textAlign: 'center', marginTop: 16 }}>No reviews yet.</Text>
+        ) : (
+          reviews.map((review, idx) => (
+            <View key={idx} style={{ marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Image source={{ uri: review.user_profile_image }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 8 }} />
+                <Text style={{ fontWeight: '600', color: COLORS.textDark }}>{review.user_name}</Text>
+                <Ionicons name="star" size={16} color="#FFD700" style={{ marginLeft: 8 }} />
+                <Text style={{ color: COLORS.textDark, marginLeft: 2 }}>{review.rating}</Text>
+              </View>
+              <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>{review.review_text}</Text>
+              <Text style={{ color: '#aaa', fontSize: 11, marginTop: 2 }}>{new Date(review.created_at).toLocaleDateString()}</Text>
+            </View>
+          ))
+        )}
+      </ScrollView>
+      <TouchableOpacity style={styles.actionButton} onPress={handleViewAllReviews}>
         <Ionicons name="chatbubbles-outline" size={20} color={COLORS.white} />
         <Text style={styles.actionButtonText}>View All Reviews</Text>
       </TouchableOpacity>
@@ -425,84 +619,80 @@ const ConsultantAdminHome = () => {
             </View>
           </View>
 
-          {/* Upcoming Appointments Carousel */}
+          {/* Upcoming Appointments Section */}
           <View style={styles.appointmentsSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
-              <TouchableOpacity style={styles.seeAllButton}>
-                <Text style={styles.seeAllText}>See All</Text>
-                <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
-              </TouchableOpacity>
+              {/* See All button can go here if needed */}
             </View>
-            
-            <FlatList
-              ref={flatListRef}
-              data={confirmedAppointments}
-              renderItem={renderAppointmentCard}
-              keyExtractor={(item) => item.id.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={screenWidth - 32}
-              decelerationRate="fast"
-              snapToAlignment="center"
-              contentContainerStyle={{
-                paddingHorizontal: confirmedAppointments.length === 1 ? 0 : 16
-              }}
-              pagingEnabled={true}
-              onMomentumScrollEnd={e => {
-                const newIndex = Math.round(e.nativeEvent.contentOffset.x / (screenWidth - 32));
-                setCurrentIndex(newIndex);
-              }}
-            />
-            
+            {confirmedAppointments.length === 0 ? (
+              <View style={{ alignItems: 'center', padding: 32 }}>
+                <Ionicons name="calendar-outline" size={48} color={COLORS.lightGrey} style={{ marginBottom: 12 }} />
+                <Text style={{ color: COLORS.grey, fontSize: 16, textAlign: 'center' }}>
+                  No upcoming confirmed appointments.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={confirmedAppointments}
+                renderItem={renderAppointmentCard}
+                keyExtractor={(item) => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                pagingEnabled
+                snapToAlignment="center"
+                decelerationRate="fast"
+                contentContainerStyle={styles.carouselContainer}
+                getItemLayout={(_, index) => ({ length: screenWidth - 48, offset: (screenWidth - 48) * index, index })}
+                initialScrollIndex={currentIndex}
+                onMomentumScrollEnd={e => {
+                  const index = Math.round(e.nativeEvent.contentOffset.x / (screenWidth - 48));
+                  setCurrentIndex(index);
+                }}
+              />
+            )}
             {/* Pagination Dots */}
-            <View style={styles.paginationContainer}>
-              {confirmedAppointments.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.paginationDot,
-                    currentIndex === index ? styles.paginationDotActive : styles.paginationDotInactive
-                  ]}
-                />
-              ))}
-            </View>
+            {confirmedAppointments.length > 1 && (
+              <View style={styles.paginationContainer}>
+                {confirmedAppointments.map((_, idx) => (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.paginationDot,
+                      idx === currentIndex ? styles.paginationDotActive : styles.paginationDotInactive,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
           </View>
 
-          {/* Tab Navigation */}
+          {/* Tabs and Tab Content ...existing code... */}
           <View style={styles.tabContainer}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tabScrollContainer}
-            >
+            <ScrollView  horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContainer}>
               {tabsData.map((tab) => (
                 <TouchableOpacity
                   key={tab.id}
                   style={[
                     styles.tabButton,
-                    activeTab === tab.id && styles.tabButtonActive
+                    activeTab === tab.id && styles.tabButtonActive,
                   ]}
-                  onPress={() => setActiveTab(tab.id)}
+                  onPress={() => {
+                    setActiveTab(tab.id);
+                  }}
                 >
-                  <Ionicons 
-                    name={tab.icon as any} 
-                    size={20} 
-                    color={activeTab === tab.id ? COLORS.white : COLORS.textSecondary} 
-                  />
+                  <Ionicons name={tab.icon as any} size={18} color={activeTab === tab.id ? COLORS.white : COLORS.textSecondary} />
                   <Text style={[
                     styles.tabButtonText,
-                    activeTab === tab.id && styles.tabButtonTextActive
-                  ]}>
-                    {tab.title}
-                  </Text>
+                    activeTab === tab.id && styles.tabButtonTextActive,
+                  ]}>{tab.title}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
+            {renderTabContent()}
           </View>
 
-          {/* Tab Content */}
-          {renderTabContent()}
         </ScrollView>
         <StatusBar style="dark" />
       </SafeAreaView>
@@ -854,30 +1044,21 @@ const styles = StyleSheet.create({
   // Resources Tab Styles
   resourceGrid: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
     marginBottom: 12,
+    justifyContent: 'space-between',
   },
   resourceCard: {
-    flex: 1,
+    width: '48%', // Two columns with spacing
     backgroundColor: COLORS.cardBackground,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.lightGrey,
+    marginBottom: 12,
   },
-  resourceCount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.textDark,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  resourceLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
+
   // Reviews Tab Styles
   ratingOverview: {
     flexDirection: 'row',
@@ -932,7 +1113,6 @@ const styles = StyleSheet.create({
   ratingBarFill: {
     height: '100%',
     backgroundColor: '#FFD700',
-    borderRadius: 3,
   },
   ratingCount: {
     fontSize: 12,

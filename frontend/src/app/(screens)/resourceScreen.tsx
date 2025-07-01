@@ -1,184 +1,218 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation
-import { Ionicons } from '@expo/vector-icons'; // For back button icon
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../constants/theme';
 import { router } from 'expo-router';
+import { fetchResources } from '../../services/api';
 
-type ResourcesProps = {
+// Resource type for backend resource objects
+interface Resource {
     id: number;
     title: string;
     description: string;
-    image: string;
-    gradient: [];
-    icon: string;
+    type: string;
+    file_url: string;
+    preview_image_url?: string;
+    [key: string]: any;
 }
 
-const Resources = () => {
-const { width } = useWindowDimensions();
-const navigation = useNavigation(); // Initialize navigation
+const CATEGORY_MAP = {
+    books: 'book',
+    audio: 'audio',
+    articles: 'article',
+    routines: 'routine',
+    music: 'music',
+    podcasts: 'podcast',
+};
 
-// Sample resource data
-const resources = [
+const resourcesMeta = [
     {
-    id: 'books',
-    title: 'Books',
-    description: 'Explore mental health books for personal growth and understanding.',
-    image: 'https://example.com/books.jpg',
-    gradient: ['#667eea', '#764ba2'],
-    icon: '📚',
+        id: 'books',
+        title: 'Books',
+        description: 'Explore mental health books for personal growth and understanding.',
+        gradient: ['#667eea', '#764ba2'],
+        icon: '📚',
     },
     {
-    id: 'audio',
-    title: 'Audio',
-    description: 'Listen to guided audio sessions for relaxation and focus.',
-    image: 'https://example.com/audio.jpg',
-    gradient: ['#f093fb', '#f5576c'],
-    icon: '🎧',
+        id: 'audio',
+        title: 'Audio',
+        description: 'Listen to guided audio sessions for relaxation and focus.',
+        gradient: ['#f093fb', '#f5576c'],
+        icon: '🎧',
     },
     {
-    id: 'articles',
-    title: 'Articles',
-    description: 'Read insightful articles on mental wellness and coping strategies.',
-    image: 'https://example.com/articles.jpg',
-    gradient: ['#4facfe', '#00f2fe'],
-    icon: '📰',
+        id: 'articles',
+        title: 'Articles',
+        description: 'Read insightful articles on mental wellness and coping strategies.',
+        gradient: ['#4facfe', '#00f2fe'],
+        icon: '📰',
     },
     {
-    id: 'routines',
-    title: 'Routines',
-    description: 'Build daily routines to support your mental health journey.',
-    image: 'https://example.com/routines.jpg',
-    gradient: ['#43e97b', '#38f9d7'],
-    icon: '⏰',
+        id: 'routines',
+        title: 'Routines',
+        description: 'Build daily routines to support your mental health journey.',
+        gradient: ['#43e97b', '#38f9d7'],
+        icon: '⏰',
     },
     {
-    id: 'music',
-    title: 'Music',
-    description: 'Discover calming music playlists to soothe your mind.',
-    image: 'https://example.com/music.jpg',
-    gradient: ['#fa709a', '#fee140'],
-    icon: '🎵',
+        id: 'music',
+        title: 'Music',
+        description: 'Discover calming music playlists to soothe your mind.',
+        gradient: ['#fa709a', '#fee140'],
+        icon: '🎵',
     },
     {
-    id: 'podcasts',
-    title: 'Podcasts',
-    description: 'Tune into podcasts discussing mental health and well-being.',
-    image: 'https://example.com/podcasts.jpg',
-    gradient: ['#a8edea', '#fed6e3'],
-    icon: '🎙️',
+        id: 'podcasts',
+        title: 'Podcasts',
+        description: 'Tune into podcasts discussing mental health and well-being.',
+        gradient: ['#a8edea', '#fed6e3'],
+        icon: '🎙️',
     },
     {
-    id: 'apply',
-    title: 'Apply for Resources',
-    description: 'Need additional support? Apply for personalized mental health resources.',
-    image: 'https://example.com/apply.jpg',
-    gradient: ['#ff9a9e', '#fecfef'],
-    icon: '✨',
-    isApplyCard: true,
+        id: 'apply',
+        title: 'Apply for Resources',
+        description: 'Need additional support? Apply for personalized mental health resources.',
+        gradient: ['#ff9a9e', '#fecfef'],
+        icon: '✨',
+        isApplyCard: true,
     },
 ];
 
-// Fix renderItem signature for FlatList
-const renderItem = ({ item }: { item: any }) => {
-    if (item.isApplyCard) {
-    return (
-        <TouchableOpacity
-        style={[styles.card, styles.applyCard]}
-        onPress={() => {
-            console.log('Navigate to application form');
-        }}
-        >
-        <LinearGradient
-            colors={item.gradient}
-            style={styles.applyGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-        >
-            <View style={styles.applyContent}>
-            <Text style={styles.applyIcon}>{item.icon}</Text>
-            <Text style={styles.applyTitle}>{item.title}</Text>
-            <Text style={styles.applyDescription}>{item.description}</Text>
-            <View style={styles.applyButton}>
-                <Text style={styles.applyButtonText}>Get Started</Text>
-            </View>
-            </View>
-        </LinearGradient>
-        </TouchableOpacity>
-    );
-    }
+const Resources = () => {
+    const { width } = useWindowDimensions();
+    const navigation = useNavigation();
+    const [resources, setResources] = useState<Resource[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Map resource id to screen route
-    const resourceRoutes: { [key: string]: string } = {
-      books: '/(screens)/BooksScreen',
-      audio: '/(screens)/AudioScreen',
-      articles: '/(screens)/ArticlesScreen',
-      routines: '/(screens)/RoutinesScreen',
-      music: '/(screens)/MusicScreen',
-      podcasts: '/(screens)/PodcastsScreen',
+    useEffect(() => {
+        const loadResources = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await fetchResources();
+            setResources(data.resources || []);
+        } catch (err) {
+            setError('Failed to load resources.');
+        } finally {
+            setLoading(false);
+        }
+        };
+        loadResources();
+    }, []);
+
+    const handleCategoryPress = (categoryId: keyof typeof CATEGORY_MAP) => {
+        const backendType = CATEGORY_MAP[categoryId];
+        const filtered = resources.filter((r) => r.type === backendType);
+        const routeMap: Record<keyof typeof CATEGORY_MAP, string> = {
+        books: '/(screens)/BooksScreen',
+        audio: '/(screens)/AudioScreen',
+        articles: '/(screens)/ArticlesScreen',
+        routines: '/(screens)/RoutinesScreen',
+        music: '/(screens)/MusicScreen',
+        podcasts: '/(screens)/PodcastsScreen',
+        };
+        const route = routeMap[categoryId];
+        if (route) {
+        router.push({ pathname: route, params: { resources: JSON.stringify(filtered) } });
+        }
+    };
+
+    const renderItem = ({ item }: { item: typeof resourcesMeta[number] }) => {
+        if (item.isApplyCard) {
+        return (
+            <TouchableOpacity
+            style={[styles.card, styles.applyCard]}
+            onPress={() => {
+                // TODO: Navigate to application form
+            }}
+            >
+            <LinearGradient
+                colors={item.gradient}
+                style={styles.applyGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                <View style={styles.applyContent}>
+                <Text style={styles.applyIcon}>{item.icon}</Text>
+                <Text style={styles.applyTitle}>{item.title}</Text>
+                <Text style={styles.applyDescription}>{item.description}</Text>
+                <View style={styles.applyButton}>
+                    <Text style={styles.applyButtonText}>Get Started</Text>
+                </View>
+                </View>
+            </LinearGradient>
+            </TouchableOpacity>
+        );
+        }
+        return (
+        <TouchableOpacity
+            style={styles.card}
+            onPress={() => handleCategoryPress(item.id as keyof typeof CATEGORY_MAP)}
+        >
+            <View style={styles.cardHeader}>
+            <View style={[styles.iconContainer, { backgroundColor: item.gradient[0] + '20' }]}>
+                <Text style={styles.cardIcon}>{item.icon}</Text>
+            </View>
+            </View>
+            <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.cardDescription} numberOfLines={3}>
+                {item.description}
+            </Text>
+            </View>
+            <View style={styles.footer}>
+            <LinearGradient
+                colors={item.gradient}
+                style={styles.gradientBorder}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+            />
+            </View>
+        </TouchableOpacity>
+        );
     };
 
     return (
-    <TouchableOpacity
-        style={styles.card}
-        onPress={() => {
-          const route = resourceRoutes[item.id];
-          if (route) router.push(route);
-        }}
-    >
-        <View style={styles.cardHeader}>
-        <View style={[styles.iconContainer, { backgroundColor: item.gradient[0] + '20' }]}>
-            <Text style={styles.cardIcon}>{item.icon}</Text>
+        <SafeAreaView style={styles.container}>
+        <View style={styles.headerContainer}>
+            <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            >
+            <Ionicons name="arrow-back" size={24} color={COLORS.textDark || '#333'} />
+            </TouchableOpacity>
+            <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Resources</Text>
+            <Text style={styles.headerSubtitle}>Discover tools for your wellness journey</Text>
+            </View>
         </View>
-        </View>
-        <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardDescription} numberOfLines={3}>
-            {item.description}
-        </Text>
-        </View>
-        <View style={styles.footer}>
-        <LinearGradient
-            colors={item.gradient}
-            style={styles.gradientBorder}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-        />
-        </View>
-    </TouchableOpacity>
+        {loading ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={COLORS.primary || '#667eea'} />
+            </View>
+        ) : error ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: 'red' }}>{error}</Text>
+            </View>
+        ) : (
+            <FlatList
+            data={resourcesMeta}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={styles.cardRow}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            />
+        )}
+        <StatusBar style="dark" />
+        </SafeAreaView>
     );
-};
-
-return (
-    <SafeAreaView style={styles.container}>
-    {/* Custom Header */}
-    <View style={styles.headerContainer}>
-        <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-        >
-        <Ionicons name="arrow-back" size={24} color={COLORS.textDark || '#333'} />
-        </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-        <Text style={styles.headerTitle}>Resources</Text>
-        <Text style={styles.headerSubtitle}>Discover tools for your wellness journey</Text>
-        </View>
-    </View>
-    <FlatList
-        data={resources}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.cardRow}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-    />
-    <StatusBar style="dark" />
-    </SafeAreaView>
-);
 };
 
 const styles = StyleSheet.create({

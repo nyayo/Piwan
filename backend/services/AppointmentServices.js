@@ -115,19 +115,32 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
 
         let query, params, countQuery, countParams;
 
-        // Base query construction
+        // Base query construction with reviews join
         if (userType === 'user') {
             query = `
-                SELECT a.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email, u.phone as user_phone, u.profile_image, u.dob
+                SELECT 
+                    a.*, 
+                    CONCAT(c.first_name, ' ', c.last_name) as consultant_name, 
+                    c.email asconsultantr_email, 
+                    c.phone as consultant_phone, 
+                    c.profile_image, 
+                    c.dob,
+                    c.gender,
+                    r.id as review_id,
+                    r.rating,
+                    r.review_text,
+                    r.created_at as review_date
                 FROM appointments a
-                LEFT JOIN users u ON a.user_id = u.id
-                WHERE a.consultant_id = ?
+                LEFT JOIN consultants c ON a.consultant_id = c.id
+                LEFT JOIN reviews r ON a.id = r.appointment_id
+                WHERE a.user_id = ?
             `;
             
             countQuery = `
-                SELECT COUNT(*) as total
+                SELECT COUNT(DISTINCT a.id) as total
                 FROM appointments a
-                LEFT JOIN users u ON a.user_id = u.id
+                LEFT JOIN consultants c ON a.user_id = c.id
+                LEFT JOIN reviews r ON a.id = r.appointment_id
                 WHERE a.consultant_id = ?
             `;
             
@@ -135,16 +148,29 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
             countParams = [userId];
         } else {
             query = `
-                SELECT a.*, CONCAT(u.first_name, ' ', u.last_name) as user_name, u.email as user_email, u.phone as user_phone, u.profile_image, u.dob
+                SELECT 
+                    a.*, 
+                    CONCAT(u.first_name, ' ', u.last_name) as user_name, 
+                    u.email as user_email, 
+                    u.phone as user_phone, 
+                    u.profile_image, 
+                    u.dob,
+                    u.gender,
+                    r.id as review_id,
+                    r.rating,
+                    r.review_text,
+                    r.created_at as review_date
                 FROM appointments a
                 LEFT JOIN users u ON a.user_id = u.id
+                LEFT JOIN reviews r ON a.id = r.appointment_id
                 WHERE a.consultant_id = ?
             `;
             
             countQuery = `
-                SELECT COUNT(*) as total
+                SELECT COUNT(DISTINCT a.id) as total
                 FROM appointments a
                 LEFT JOIN users u ON a.user_id = u.id
+                LEFT JOIN reviews r ON a.id = r.appointment_id
                 WHERE a.consultant_id = ?
             `;
             
@@ -185,6 +211,15 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
             countQuery += ' AND DATE(a.appointment_datetime) = ?';
             params.push(appointment.date);
             countParams.push(appointment.date);
+        }
+
+        // Add filter for reviewed/unreviewed appointments
+        if (appointment.reviewed === 'true') {
+            query += ' AND r.id IS NOT NULL';
+            countQuery += ' AND r.id IS NOT NULL';
+        } else if (appointment.reviewed === 'false') {
+            query += ' AND r.id IS NULL';
+            countQuery += ' AND r.id IS NULL';
         }
 
         // Add ordering

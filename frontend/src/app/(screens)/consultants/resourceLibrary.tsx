@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   Dimensions,
   TextInput,
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,8 +21,23 @@ import { useAuth } from '../../../context/authContext';
 import { StatusBar } from 'expo-status-bar';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { uploadResource as uploadToCloudinary, CloudinarySignatureResponse } from '../../../services/cloudinaryUpload';
+import { uploadResource as uploadResourceApi, fetchResources as fetchResourcesApi } from '../../../services/api';
+import { API_BASE_URL } from '../../../services/api';
 
 const { width } = Dimensions.get('window');
+
+type FileAsset = {
+  uri: string;
+  name: string;
+  mimeType: string | undefined;
+};
+
+type ImageAsset = {
+  uri: string;
+  name?: string;
+  mimeType?: string;
+};
 
 export default function MediaLibraryScreen() {
   const { user } = useAuth();
@@ -32,7 +48,14 @@ export default function MediaLibraryScreen() {
   const scrollViewRef = useRef(null);
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    category: string;
+    previewImage: ImageAsset | null;
+    file: FileAsset | null;
+    type: string;
+  }>({
     title: '',
     description: '',
     category: '',
@@ -42,6 +65,8 @@ export default function MediaLibraryScreen() {
   });
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Categories for dropdown
   const categories = [
@@ -57,63 +82,45 @@ export default function MediaLibraryScreen() {
     'Exercise'
   ];
 
-  // Sample media data - replace with your API data
-  const [mediaItems, setMediaItems] = useState([
-    {
-      id: '1',
-      title: 'Mindfulness Meditation Guide',
-      type: 'book',
-      category: 'Mental Health',
-      author: 'Dr. Sarah Johnson',
-      duration: '45 min read',
-      thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop',
-      uploadDate: '2024-01-15',
-      downloads: 156,
-      rating: 4.8,
-    },
-    {
-      id: '2',
-      title: 'Healing Sounds of Nature',
-      type: 'music',
-      category: 'Relaxation',
-      author: 'Nature Sounds Collective',
-      duration: '30 min',
-      thumbnail: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300&h=200&fit=crop',
-      uploadDate: '2024-01-10',
-      downloads: 89,
-      rating: 4.6,
-    },
-    {
-      id: '3',
-      title: 'Anxiety Management Techniques',
-      type: 'article',
-      category: 'Psychology',
-      author: 'Dr. Michael Chen',
-      duration: '12 min read',
-      thumbnail: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=300&h=200&fit=crop',
-      uploadDate: '2024-01-08',
-      downloads: 234,
-      rating: 4.9,
-    },
-    {
-      id: '4',
-      title: 'Yoga for Beginners Video',
-      type: 'video',
-      category: 'Physical Wellness',
-      author: 'Wellness Studio',
-      duration: '25 min',
-      thumbnail: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=300&h=200&fit=crop',
-      uploadDate: '2024-01-05',
-      downloads: 178,
-      rating: 4.7,
-    },
-  ]);
+  const name = `${user?.first_name} ${user?.last_name}`
+
+  // Fetch resources from backend
+  useEffect(() => {
+    const fetchResources = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchResourcesApi();
+        // Map backend data to MediaItem[]
+        const mapped = (data.resources || []).map((item: any) => ({
+          id: item.id?.toString() || Date.now().toString(),
+          title: item.title,
+          type: item.type,
+          category: item.category,
+          author: item.author || 'Unknown',
+          duration: item.duration || '',
+          thumbnail: item.preview_image_url || item.file_url || '',
+          uploadDate: item.uploadDate || item.created_at?.split('T')[0] || item.upload_date?.split('T')[0] || '',
+          downloads: item.downloads || 0,
+          rating: item.rating || 0,
+        }));
+        setMediaItems(mapped);
+      } catch (error) {
+        Alert.alert('Error', 'Could not fetch resources');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchResources();
+  }, []);
 
   const tabs = [
     { id: 'all', title: 'All', icon: 'grid-outline' },
     { id: 'book', title: 'Books', icon: 'book-outline' },
     { id: 'article', title: 'Articles', icon: 'document-text-outline' },
     { id: 'music', title: 'Music', icon: 'musical-notes-outline' },
+    { id: 'audio', title: 'Audio', icon: 'headset-outline' },
+    { id: 'podcast', title: 'Podcasts', icon: 'mic-outline' },
+    { id: 'routine', title: 'Routines', icon: 'repeat-outline' },
     { id: 'video', title: 'Videos', icon: 'videocam-outline' },
   ];
 
@@ -158,11 +165,15 @@ export default function MediaLibraryScreen() {
         aspect: [4, 3],
         quality: 0.8,
       });
-
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
         setFormData(prev => ({
           ...prev,
-          previewImage: result.assets[0]
+          previewImage: {
+            uri: asset.uri,
+            name: asset.fileName || 'preview.jpg',
+            mimeType: asset.mimeType || 'image/jpeg',
+          }
         }));
       }
     } catch (error) {
@@ -173,23 +184,32 @@ export default function MediaLibraryScreen() {
   const handleFileUpload = async (type) => {
     try {
       let result;
-      
+      // Map resource types to correct MIME types for DocumentPicker
       switch (type) {
-        case 'document':
+        case 'book':
+        case 'article':
           result = await DocumentPicker.getDocumentAsync({
-            type: ['application/pdf', 'application/msword', 'text/plain'],
+            type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+            copyToCacheDirectory: true,
+          });
+          break;
+        case 'music':
+        case 'audio':
+        case 'podcast':
+          result = await DocumentPicker.getDocumentAsync({
+            type: ['audio/*', 'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-m4a'],
+            copyToCacheDirectory: true,
+          });
+          break;
+        case 'routine':
+          result = await DocumentPicker.getDocumentAsync({
+            type: ['application/pdf', 'text/plain'],
             copyToCacheDirectory: true,
           });
           break;
         case 'image':
           result = await DocumentPicker.getDocumentAsync({
             type: 'image/*',
-            copyToCacheDirectory: true,
-          });
-          break;
-        case 'audio':
-          result = await DocumentPicker.getDocumentAsync({
-            type: 'audio/*',
             copyToCacheDirectory: true,
           });
           break;
@@ -205,10 +225,15 @@ export default function MediaLibraryScreen() {
           });
       }
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
         setFormData(prev => ({
           ...prev,
-          file: result.assets[0],
+          file: {
+            uri: asset.uri,
+            name: asset.name || 'resource',
+            mimeType: asset.mimeType || '',
+          },
           type: type
         }));
       }
@@ -235,28 +260,47 @@ export default function MediaLibraryScreen() {
       Alert.alert('Error', 'Please select a file to upload');
       return;
     }
-
     setIsUploading(true);
-
     try {
-      // Here you would implement your actual upload logic
-      // For demo purposes, we'll just simulate an upload
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Add new item to media items (in real app, this would come from API response)
+      // 1. Upload file to Cloudinary
+      const backendSignatureUrl = `${API_BASE_URL}/cloudinary-signature?folder=resources`; // Replace with your backend URL
+      const fileUrl = await uploadToCloudinary(
+        formData.file.uri,
+        backendSignatureUrl,
+        formData.file.mimeType || 'application/octet-stream',
+        formData.file.name || 'resource'
+      );
+      // 2. Upload preview image if present
+      let previewImageUrl = '';
+      if (formData.previewImage?.uri) {
+        previewImageUrl = await uploadToCloudinary(
+          formData.previewImage.uri,
+          backendSignatureUrl,
+          formData.previewImage.mimeType || 'image/jpeg',
+          formData.previewImage.name || 'preview.jpg'
+        );
+      }
+      // 3. Send resource metadata to backend
+      const resourcePayload = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        type: formData.type,
+        file_url: fileUrl,
+        preview_image_url: previewImageUrl,
+        author: name || 'Current User',
+        duration: 'New',
+      };
+      await uploadResourceApi(resourcePayload);
+      // 4. Add new item to local state (optional, for instant UI update)
       const newItem = {
         id: Date.now().toString(),
-        title: formData.title,
-        type: formData.type,
-        category: formData.category,
-        author: user?.name || 'Current User',
-        duration: 'New',
-        thumbnail: formData.previewImage?.uri || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=300&h=200&fit=crop',
+        ...resourcePayload,
+        thumbnail: previewImageUrl || fileUrl,
         uploadDate: new Date().toISOString().split('T')[0],
         downloads: 0,
         rating: 0,
       };
-
       setMediaItems(prev => [newItem, ...prev]);
       setIsUploading(false);
       closeModal();
@@ -267,7 +311,7 @@ export default function MediaLibraryScreen() {
     }
   };
 
-  const getMediaIcon = (type) => {
+  const getMediaIcon = (type: string): any => {
     switch (type) {
       case 'book': return 'book-outline';
       case 'article': return 'document-text-outline';
@@ -277,7 +321,20 @@ export default function MediaLibraryScreen() {
     }
   };
 
-  const renderMediaItem = ({ item }) => (
+  interface MediaItem {
+    id: string;
+    title: string;
+    type: string;
+    category: string;
+    author: string;
+    duration: string;
+    thumbnail: string;
+    uploadDate: string;
+    downloads: number;
+    rating: number;
+  }
+
+  const renderMediaItem = ({ item }: { item: MediaItem }) => (
     <TouchableOpacity style={styles.mediaCard} activeOpacity={0.7}>
       <Image source={{ uri: item.thumbnail }} style={styles.mediaThumbnail} />
       <View style={styles.mediaOverlay}>
@@ -291,7 +348,7 @@ export default function MediaLibraryScreen() {
       
       <View style={styles.mediaInfo}>
         <Text style={styles.mediaTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.mediaAuthor}>{item.author}</Text>
+        <Text style={styles.mediaAuthor}>By {item.author}</Text>
         <Text style={styles.mediaCategory}>{item.category}</Text>
         
         <View style={styles.mediaStats}>
@@ -312,16 +369,22 @@ export default function MediaLibraryScreen() {
     </TouchableOpacity>
   );
 
-  const renderTab = (tab) => (
+  interface TabItem {
+    id: string;
+    title: string;
+    icon: string;
+  }
+
+  const renderTab = (tab: TabItem) => (
     <TouchableOpacity
       key={tab.id}
       style={[styles.tab, activeTab === tab.id && styles.activeTab]}
       onPress={() => setActiveTab(tab.id)}
     >
       <Ionicons 
-        name={tab.icon} 
+        name={tab.icon as any} 
         size={20} 
-        color={activeTab === tab.id ? COLORS.primary : COLORS.textSecondary} 
+        color={activeTab === tab.id ? COLORS.white : COLORS.textSecondary} 
       />
       <Text style={[
         styles.tabText, 
@@ -376,16 +439,48 @@ export default function MediaLibraryScreen() {
       </ScrollView>
 
       {/* Media Grid */}
-      <FlatList
-        ref={scrollViewRef}
-        data={filteredItems}
-        renderItem={renderMediaItem}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.mediaGrid}
-        showsVerticalScrollIndicator={false}
-      />
+      <View style={{ flex: 1}}>
+        {isLoading ? (
+          // Skeleton loader (simple version)
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={{ marginTop: 16, color: COLORS.textSecondary }}>Loading resources...</Text>
+            <View style={{ flexDirection: 'row', marginTop: 32 }}>
+              {[1,2].map((_, idx) => (
+                <View key={idx} style={{
+                  width: (width - 50) / 2,
+                  height: 180,
+                  backgroundColor: COLORS.lightGrey,
+                  borderRadius: 12,
+                  marginHorizontal: 8,
+                  opacity: 0.4
+                }} />
+              ))}
+            </View>
+          </View>
+        ) : filteredItems.length === 0 ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textSecondary} style={{ marginBottom: 12 }} />
+            <Text style={{ color: COLORS.textSecondary, fontSize: 16, textAlign: 'center' }}>
+              No resources found.
+            </Text>
+            <Text style={{ color: COLORS.textSecondary, fontSize: 13, marginTop: 4, textAlign: 'center' }}>
+              Try uploading a new resource or check back later.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={scrollViewRef}
+            data={filteredItems}
+            renderItem={renderMediaItem}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            contentContainerStyle={styles.mediaGrid}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
 
       {/* Upload Modal */}
       <Modal
@@ -525,20 +620,46 @@ export default function MediaLibraryScreen() {
                   <View style={styles.fileOptions}>
                     <TouchableOpacity 
                       style={styles.fileOption}
-                      onPress={() => handleFileUpload('document')}
+                      onPress={() => handleFileUpload('book')}
+                    >
+                      <Ionicons name="book-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Book</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('article')}
                     >
                       <Ionicons name="document-text-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Document</Text>
+                      <Text style={styles.fileOptionText}>Article</Text>
                     </TouchableOpacity>
-
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('music')}
+                    >
+                      <Ionicons name="musical-notes-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Music</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.fileOption}
                       onPress={() => handleFileUpload('audio')}
                     >
-                      <Ionicons name="musical-notes-outline" size={24} color={COLORS.primary} />
+                      <Ionicons name="headset-outline" size={24} color={COLORS.primary} />
                       <Text style={styles.fileOptionText}>Audio</Text>
                     </TouchableOpacity>
-
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('podcast')}
+                    >
+                      <Ionicons name="mic-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Podcast</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('routine')}
+                    >
+                      <Ionicons name="repeat-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Routine</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.fileOption}
                       onPress={() => handleFileUpload('video')}
@@ -546,7 +667,6 @@ export default function MediaLibraryScreen() {
                       <Ionicons name="videocam-outline" size={24} color={COLORS.primary} />
                       <Text style={styles.fileOptionText}>Video</Text>
                     </TouchableOpacity>
-
                     <TouchableOpacity 
                       style={styles.fileOption}
                       onPress={() => handleFileUpload('image')}
@@ -635,17 +755,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   tabsContainer: {
-    maxHeight: 60,
+    maxHeight: 45,
   },
   tabsContent: {
     paddingHorizontal: 20,
-    paddingBottom: 10,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
     marginRight: 12,
     backgroundColor: COLORS.background,
@@ -667,6 +786,7 @@ const styles = StyleSheet.create({
   },
   mediaGrid: {
     padding: 20,
+    // marginTop: 8
   },
   row: {
     justifyContent: 'space-between',

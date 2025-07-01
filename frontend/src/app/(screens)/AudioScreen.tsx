@@ -1,40 +1,46 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import COLORS from '../../constants/theme';
 
-const audioResources = [
-  {
-    id: '1',
-    title: 'Guided Relaxation',
-    description: 'A calming audio session to help you relax and unwind.',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/guided-relaxation.mp3',
-  },
-  {
-    id: '2',
-    title: 'Focus Booster',
-    description: 'Audio to help you concentrate and boost productivity.',
-    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/focus-booster.mp3',
-  },
-];
+interface Resource {
+  id: number;
+  title: string;
+  description: string;
+  image?: string;
+  preview_image_url?: string;
+  file_url: string;
+  type: string;
+  [key: string]: any;
+}
 
 const AudioScreen = () => {
-  const renderItem = ({ item }: { item: typeof audioResources[0] }) => (
+  const params = useLocalSearchParams();
+  const resources: Resource[] | null = useMemo(() => {
+    if (params.resources) {
+      try {
+        return JSON.parse(params.resources as string);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [params.resources]);
+
+  const renderItem = ({ item }: { item: Resource }) => (
     <TouchableOpacity
       key={item.id}
       style={styles.card}
       activeOpacity={0.85}
       onPress={() => router.push({
         pathname: '/(screens)/ResourceViewerScreen',
-        params: { title: item.title, url: item.url }
+        params: { title: item.title, file_url: item.file_url, preview_image_url: item.preview_image_url, author: item.author }
       })}
     >
       <View style={styles.cardBody}>
-        <Image source={{ uri: item.image }} style={styles.thumbnailRow} />
+        <Image source={{ uri: item.preview_image_url || item.image || undefined }} style={styles.thumbnailRow} />
         <Text style={styles.cardTitleRow}>{item.title}</Text>
         <Text style={styles.cardDescriptionRow}>{item.description}</Text>
         <TouchableOpacity
@@ -44,7 +50,7 @@ const AudioScreen = () => {
             e.stopPropagation?.();
             router.push({
               pathname: '/(screens)/ResourceViewerScreen',
-              params: { title: item.title, url: item.url }
+              params: { title: item.title, file_url: item.file_url, preview_image_url: item.preview_image_url, author: item.author }
             });
           }}
         >
@@ -66,27 +72,65 @@ const AudioScreen = () => {
           <Text style={styles.headerDescription}>Listen to guided audio sessions for relaxation and focus.</Text>
         </View>
       </View>
-      <FlatList
-        data={audioResources}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.cardRow}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      />
+      {!resources ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : resources.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: COLORS.grey, fontSize: 16 }}>No audio resources found.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={resources}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.cardRow}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fafafa' },
-  header: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  backButton: { padding: 8, marginRight: 12 },
-  headerTitle: { fontSize: 24, fontWeight: '700', color: COLORS.textDark },
-  headerDescription: { fontSize: 15, color: COLORS.textDark, marginTop: 2, fontWeight: '400' },
-  content: { padding: 24 },
-  cardRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fafafa' 
+  },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start', 
+    padding: 16, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f0f0f0' 
+  },
+  backButton: { 
+    padding: 8, 
+    marginRight: 12 
+  },
+  headerTitle: { 
+    fontSize: 24, 
+    fontWeight: '700', 
+    color: COLORS.textDark 
+  },
+  headerDescription: { 
+    fontSize: 15, 
+    color: COLORS.textDark, 
+    marginTop: 2, 
+    fontWeight: '400' 
+  },
+  content: { 
+    padding: 24 
+  },
+  cardRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between',
+    marginBottom: 16 
+  },
   card: {
     flex: 1,
     minWidth: 0,
@@ -102,12 +146,52 @@ const styles = StyleSheet.create({
     padding: 0,
     marginHorizontal: 4,
   },
-  cardBody: { alignItems: 'center', padding: 16, paddingBottom: 8 },
-  thumbnailRow: { width: '100%', height: 100, borderRadius: 12, marginBottom: 10, backgroundColor: '#eee' },
-  cardTitleRow: { fontSize: 18, fontWeight: '700', color: COLORS.textDark, marginBottom: 6 },
-  cardDescriptionRow: { fontSize: 13, color: COLORS.grey, lineHeight: 18, fontWeight: '400', marginBottom: 8 },
-  downloadButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, borderRadius: 25, paddingVertical: 10, paddingHorizontal: 22, alignSelf: 'center', marginTop: 8, marginBottom: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 2 },
-  downloadButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  cardBody: { 
+    alignItems: 'center', 
+    padding: 16, 
+    paddingBottom: 8 
+  },
+  thumbnailRow: { 
+    width: '100%', 
+    height: 100, 
+    borderRadius: 12, 
+    marginBottom: 10, 
+    backgroundColor: '#eee' 
+  },
+  cardTitleRow: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: COLORS.textDark, 
+    marginBottom: 6 },
+  cardDescriptionRow: { 
+    fontSize: 13, 
+    color: COLORS.grey, 
+    lineHeight: 18, 
+    fontWeight: '400', 
+    marginBottom: 8 
+  },
+  downloadButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    backgroundColor: COLORS.primary, 
+    borderRadius: 25, 
+    paddingVertical: 10, 
+    paddingHorizontal: 22, 
+    alignSelf: 'center', 
+    marginTop: 8, 
+    marginBottom: 8, 
+    shadowColor: COLORS.primary, 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.15, 
+    shadowRadius: 6,
+    elevation: 2 
+  },
+  downloadButtonText: { 
+    color: '#fff', 
+    fontWeight: '600', 
+    fontSize: 16 
+  },
 });
 
 export default AudioScreen;

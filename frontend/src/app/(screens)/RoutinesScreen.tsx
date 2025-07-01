@@ -1,40 +1,46 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import COLORS from '../../constants/theme';
 
-const routines = [
-  {
-    id: '1',
-    title: 'Morning Mindfulness',
-    description: 'A daily routine to start your day with clarity and calm.',
-    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/morning-mindfulness.pdf',
-  },
-  {
-    id: '2',
-    title: 'Evening Reflection',
-    description: 'Wind down and reflect with this evening routine.',
-    image: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/evening-reflection.pdf',
-  },
-];
+interface Resource {
+  id: number;
+  title: string;
+  description: string;
+  image?: string;
+  preview_image_url?: string;
+  file_url: string;
+  type: string;
+  [key: string]: any;
+}
 
 const RoutinesScreen = () => {
-  const renderItem = ({ item }: { item: typeof routines[0] }) => (
+  const params = useLocalSearchParams();
+  const resources: Resource[] | null = useMemo(() => {
+    if (params.resources) {
+      try {
+        return JSON.parse(params.resources as string);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [params.resources]);
+
+  const renderItem = ({ item }: { item: Resource }) => (
     <TouchableOpacity
       key={item.id}
       style={styles.card}
       activeOpacity={0.85}
       onPress={() => router.push({
         pathname: '/(screens)/ResourceViewerScreen',
-        params: { title: item.title, url: item.url }
+        params: { title: item.title, file_url: item.file_url }
       })}
     >
       <View style={styles.cardBody}>
-        <Image source={{ uri: item.image }} style={styles.thumbnailRow} />
+        <Image source={{ uri: item.preview_image_url || item.image || undefined }} style={styles.thumbnailRow} />
         <Text style={styles.cardTitleRow}>{item.title}</Text>
         <Text style={styles.cardDescriptionRow}>{item.description}</Text>
         <TouchableOpacity
@@ -66,15 +72,25 @@ const RoutinesScreen = () => {
           <Text style={styles.headerDescription}>Build and follow daily routines to support your mental health journey.</Text>
         </View>
       </View>
-      <FlatList
-        data={routines}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.cardRow}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      />
+      {!resources ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : resources.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: COLORS.grey, fontSize: 16 }}>No routines found.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={resources}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.cardRow}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 };

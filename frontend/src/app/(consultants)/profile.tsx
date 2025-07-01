@@ -19,6 +19,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../context/authContext';
 import { logoutUser } from '../../services/api';
 
+
 export default function ProfileScreen() {
   const {user, setUser} = useAuth();
   const colorScheme = useColorScheme();
@@ -35,19 +36,19 @@ export default function ProfileScreen() {
     );
   }
 
+  console.log('Profile; ', user)
+
   const handleOptionPress = (option: string) => {
     if(option === 'profile'){
       router.push("/(screens)/profileUpdate");
+    } else if(option === 'reviews') {
+      router.push('/(screens)/allReviews');
+    } else if(option === 'privacy') {
+      router.push("/(screens)/privacySecurity");
+    } else if(option === 'settings'){
+      router.push("/(screens)/preference");
     } else {
-      if(option === 'privacy') {
-        router.push("/(screens)/privacySecurity");
-      } else {
-        if(option === 'settings'){
-          router.push("/(screens)/preference");
-        } else {
-          router.push("/(screens)/consultants/resourceLibrary");
-        }
-      }
+      router.push("/(screens)/consultants/resourceLibrary");
     }
   };
 
@@ -131,7 +132,7 @@ export default function ProfileScreen() {
         <View style={styles.optionsCard}>
           <ProfileOption
             title="Reviews & Ratings"
-            description={`${user?.rating} stars •  reviews`}
+            description={`${user?.average_rating} stars • ${user?.total_reviews} reviews`}
             icon="star-outline"
             onPress={() => handleOptionPress('reviews')}
           />

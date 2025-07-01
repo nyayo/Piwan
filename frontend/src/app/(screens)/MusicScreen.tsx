@@ -1,40 +1,46 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import COLORS from '../../constants/theme';
 
-const musicResources = [
-  {
-    id: '1',
-    title: 'Peaceful Piano',
-    description: 'A playlist of calming piano music for relaxation.',
-    image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/peaceful-piano.mp3',
-  },
-  {
-    id: '2',
-    title: 'Nature Sounds',
-    description: 'Soothing sounds of nature to help you unwind.',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/nature-sounds.mp3',
-  },
-];
+interface Resource {
+  id: number;
+  title: string;
+  description: string;
+  image?: string;
+  preview_image_url?: string;
+  file_url: string;
+  type: string;
+  [key: string]: any;
+}
 
 const MusicScreen = () => {
-  const renderItem = ({ item }: { item: typeof musicResources[0] }) => (
+  const params = useLocalSearchParams();
+  const resources: Resource[] | null = useMemo(() => {
+    if (params.resources) {
+      try {
+        return JSON.parse(params.resources as string);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [params.resources]);
+
+  const renderItem = ({ item }: { item: Resource }) => (
     <TouchableOpacity
       key={item.id}
       style={styles.card}
       activeOpacity={0.85}
       onPress={() => router.push({
         pathname: '/(screens)/ResourceViewerScreen',
-        params: { title: item.title, url: item.url }
+        params: { title: item.title, file_url: item.file_url, preview_image_url: item.preview_image_url, author: item.author }
       })}
     >
       <View style={styles.cardBody}>
-        <Image source={{ uri: item.image }} style={styles.thumbnailRow} />
+        <Image source={{ uri: item.preview_image_url || item.image || undefined }} style={styles.thumbnailRow} />
         <Text style={styles.cardTitleRow}>{item.title}</Text>
         <Text style={styles.cardDescriptionRow}>{item.description}</Text>
         <TouchableOpacity
@@ -44,7 +50,7 @@ const MusicScreen = () => {
             e.stopPropagation?.();
             router.push({
               pathname: '/(screens)/ResourceViewerScreen',
-              params: { title: item.title, url: item.url }
+              params: { title: item.title, file_url: item.file_url, preview_image_url: item.preview_image_url, author: item.author }
             });
           }}
         >
@@ -66,15 +72,25 @@ const MusicScreen = () => {
           <Text style={styles.headerDescription}>Discover calming music playlists to soothe your mind.</Text>
         </View>
       </View>
-      <FlatList
-        data={musicResources}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.cardRow}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      />
+      {!resources ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : resources.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: COLORS.grey, fontSize: 16 }}>No music resources found.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={resources}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.cardRow}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 };

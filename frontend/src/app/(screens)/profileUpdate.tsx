@@ -18,6 +18,7 @@ import { useAuth } from '../../context/authContext';
 import { useUser } from '../../context/userContext';
 import ToastMessage from '../../components/ToastMessage';
 import { uploadToCloudinarySigned } from '../../services/cloudinaryUpload';
+import { API_BASE_URL } from '../../services/api';
 
 const { width } = Dimensions.get("window");
 
@@ -80,7 +81,7 @@ const ProfileUpdateScreen = () => {
         try {
             setImageUploading(true);
             // Replace with your backend endpoint
-            const backendSignatureUrl = 'https://2490-41-75-184-146.ngrok-free.app/api/cloudinary-signature';
+            const backendSignatureUrl = `${API_BASE_URL}/cloudinary-signature`;
             const secureUrl = await uploadToCloudinarySigned(imageUri, backendSignatureUrl);
             form.setValue('profileImage', secureUrl);
             setLocalImageUri(null);

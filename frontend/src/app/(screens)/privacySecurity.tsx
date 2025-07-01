@@ -12,6 +12,7 @@ import CustomTextInput from '../../components/CustomTextInput';
 import KeyboardAwareScrollView from '../../components/KeyboardAwareView';
 import { useAuth } from '../../context/authContext';
 import PrivacyItem from '../../components/PrivacyItem';
+import { changePassword as changePasswordApi } from '../../services/api';
 
 const PasswordChangeSchema = z.object({
     currentPassword: z.string().min(1, {message: "Current password is required."}),
@@ -68,16 +69,13 @@ const PrivacySecurityScreen = () => {
     const handlePasswordChange: SubmitHandler<PasswordChangeForm> = async (data) => {
         setLoading(true);
         try {
-            const response = await changePassword({
+            const response = await changePasswordApi({
                 currentPassword: data.currentPassword,
                 newPassword: data.newPassword
             });
-            
             if (response.success) {
                 Alert.alert('Success', 'Password changed successfully', [
-                    { text: 'OK', onPress: () => {
-                        form.reset();
-                    }}
+                    { text: 'OK', onPress: () => form.reset() }
                 ]);
             } else {
                 Alert.alert('Password Change Failed', response.message);

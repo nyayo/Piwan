@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure base URL (update with your backend URL)
-const API_BASE_URL = 'https://8746-41-75-178-179.ngrok-free.app/api'; // Use your local IP
+export const API_BASE_URL = 'https://abfa-41-75-176-135.ngrok-free.app/api'; // Use your local IP
 // For development on physical device, use your computer's IP address
 // For iOS simulator: http://localhost:3000/api
 // For Android emulator: http://10.0.2.2:3000/api
@@ -328,6 +328,7 @@ export const getUserAppointments = async (userId, filters = {}) => {
     const url = `/appointments/user/${userId}${queryParams ? `?${queryParams}` : ''}`;
     
     const response = await apiClient.get(url);
+    console.log('Patient Response: ', response)
     
     return response.data;
   } catch (error) {
@@ -494,6 +495,34 @@ export const getUserMood = async (date) => {
 export const setUserMood = async (date, mood) => {
   try {
     await apiClient.post('/mood', { date, mood });
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const uploadResource = async (resourceData) => {
+  try {
+    const response = await apiClient.post('/resources/upload', resourceData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const fetchResources = async () => {
+  try {
+    const response = await apiClient.get('/resources');
+    console.log('Resources; ', response)
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const changePassword = async ({ currentPassword, newPassword }) => {
+  try {
+    const response = await apiClient.post('/auth/change-password', { currentPassword, newPassword });
+    return response.data;
   } catch (error) {
     throw handleApiError(error);
   }

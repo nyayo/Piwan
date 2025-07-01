@@ -94,9 +94,13 @@ const ScheduleScreen = () => {
         }
     };
 
-    const handlePatientDetails = () => {
-        router.push('/(screens)/consultants/patientDetailsScreen')
-    }
+    // In ScheduleScreen, update handlePatientDetails to accept appointment and navigate with params
+const handlePatientDetails = (appointment: Appointment) => {
+    router.push({
+        pathname: '/(screens)/consultants/patientDetailsScreen',
+        params: { patient: JSON.stringify(appointment) }
+    });
+}
 
     // Move formatDate above its first usage
     // Helper to format date for API (YYYY-MM-DD)
@@ -528,7 +532,7 @@ const ScheduleScreen = () => {
             }
         };
         const fetchPast = async () => {
-            const filters = { status: 'completed, cancelled', limit: 100 };
+            const filters = { status: 'completed', limit: 100 };
             const result = await getConsultantAppointments(consultantId, filters);
             if (result.success && result.appointments) {
                 setPastAppointments(result.appointments);

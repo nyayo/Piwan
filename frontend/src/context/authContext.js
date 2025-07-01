@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
             if (response.success) {
                 setUser(response.user);
                 setIsAuthenticated(true);
-                return { success: true };
+                return { success: true, user: response.user }; // Return user object for immediate role-based redirect
             } else {
                 return { success: false, message: response.message };
             }

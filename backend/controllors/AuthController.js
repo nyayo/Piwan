@@ -1,7 +1,8 @@
-import {registerUser, loginUser, registerConsultant, storeRefreshToken, revokeRefreshToken, findRefreshToken} from '../services/AuthServices.js';
+import {registerUser, loginUser, registerConsultant, storeRefreshToken, revokeRefreshToken, findRefreshToken, changePasswordForAnyRole} from '../services/AuthServices.js';
 import { pool } from "../config/db.js";
 import { logActivity } from "../routes/activityRoutes.js";
 import jwt from 'jsonwebtoken';
+import { authenticate } from '../middleware/auth.js';
 
 export const register = async(req, res) => {
     const {username, email, password} = req.body;  
@@ -132,6 +133,24 @@ export const logout = async (req, res) => {
         res.json({ success: true, message: 'Logged out successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Logout failed' });
+    }
+};
+
+export const changePassword = async (req, res) => {
+    const userId = req.user?.id;
+    const role = req.user?.role;
+    const { currentPassword, newPassword } = req.body;
+    if (!userId || !role) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Current and new password are required.' });
+    }
+    const result = await changePasswordForAnyRole(userId, role, currentPassword, newPassword);
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(400).json(result);
     }
 };
 

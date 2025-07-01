@@ -66,8 +66,18 @@ export const loginUser = async(email, password) => {
                 user = admins[0];
                 role = user.role;
             } else{
-                const [consultants] = await pool.query('SELECT * FROM consultants WHERE email = ?', [email]);
-
+                const [consultants] = await pool.query(`
+                    SELECT 
+                        c.*,
+                        COUNT(r.id) as total_reviews,
+                        ROUND(AVG(r.rating), 2) as average_rating,
+                        MAX(r.created_at) as latest_review_date
+                    FROM consultants c
+                    LEFT JOIN reviews r ON c.id = r.consultant_id
+                    WHERE c.email = ?
+                    GROUP BY c.id
+                `, [email]);
+                
                 if(consultants && consultants.length > 0){
                     user = consultants[0];
                     role = user.role;
@@ -109,4 +119,33 @@ export const revokeRefreshToken = async (refreshToken) => {
 export const findRefreshToken = async (refreshToken) => {
     const [rows] = await pool.query('SELECT * FROM refresh_tokens WHERE token = ?', [refreshToken]);
     return rows.length > 0;
+};
+
+// Change password for users, admins, and consultants
+export const changePasswordForAnyRole = async (userId, role, currentPassword, newPassword) => {
+    let table = null;
+    if (role === 'user') table = 'users';
+    else if (role === 'admin') table = 'admin';
+    else if (role === 'consultant') table = 'consultants';
+    else return { success: false, message: 'Invalid role.' };
+
+    try {
+        // Get user/admin/consultant by ID
+        const [rows] = await pool.query(`SELECT * FROM ${table} WHERE id = ?`, [userId]);
+        if (!rows || rows.length === 0) {
+            return { success: false, message: 'Account not found.' };
+        }
+        const user = rows[0];
+        // Check current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return { success: false, message: 'Current password is incorrect.' };
+        }
+        // Hash new password and update
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query(`UPDATE ${table} SET password = ? WHERE id = ?`, [hashedPassword, userId]);
+        return { success: true, message: 'Password changed successfully.' };
+    } catch (error) {
+        return { success: false, message: 'Password change failed.' };
+    }
 };

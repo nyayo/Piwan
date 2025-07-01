@@ -335,7 +335,3 @@ export const cancel = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Failed to cancel appointment. Please try again later.' });
     }
 };
-
-// In your Express router (e.g. routes/appointmentRoutes.js):
-// Add this route if not already present
-//

@@ -157,7 +157,7 @@ const ScheduleAppointmentCard: React.FC<ScheduleAppointmentCardProps> = ({ appoi
                 </View>
                 <TouchableOpacity 
                     style={styles.actionButton}
-                    onPress={handlePatientDetails}
+                    onPress={() => handlePatientDetails && handlePatientDetails(appointment)}
                 >
                     <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
                 </TouchableOpacity>

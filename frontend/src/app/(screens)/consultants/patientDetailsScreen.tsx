@@ -1,25 +1,22 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import COLORS from '../../../constants/theme';
 import { Image } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { calculateAge } from '../../../helper/calculateAge';
+import truncateWords from '../../../helper/truncateWords';
+import { convertToLocalDate } from '../../../helper/convertDateTime';
+import { getUserAppointments } from '../../../services/api'; // adjust path if needed
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const PatientCardScreen = () => {
-    const [activeTab, setActiveTab] = useState('information');
-
-    const tabs = [
-        { id: 'information', label: 'Information' },
-        { id: 'sessions', label: 'Sessions' },
-        { id: 'progress', label: 'Progress' }
-    ];
-
-    const patientData = {
+    const params = useLocalSearchParams();
+    let patientData = {
         name: "Sarah Hasten",
         age: "24",
         condition: "Anxiety & Depression",
@@ -43,6 +40,34 @@ const PatientCardScreen = () => {
         occupation: "Marketing Coordinator",
         medications: ["Sertraline 50mg", "Lorazepam 0.5mg"]
     };
+    if (params.patient) {
+        try {
+            const parsed = JSON.parse(params.patient as string);
+            console.log('Patient Data: ', parsed)
+            patientData = {
+                ...patientData,
+                ...parsed,
+                name: parsed.user_name || parsed.name || patientData.name,
+                // age: parsed.age || patientData.age,
+                condition: parsed.condition || patientData.condition,
+                avatar: parsed.profile_image || patientData.avatar,
+                age: parsed.dob || patientData.age,
+                gender: parsed.gender || patientData.gender,
+                email: parsed.user_email || patientData.email,
+                phone: parsed.user_phone || '+256 000 000 000',
+            };
+        } catch (e) {}
+    }
+
+    const [activeTab, setActiveTab] = useState('information');
+    const [sessions, setSessions] = useState([]);
+    const [loadingSessions, setLoadingSessions] = useState(false);
+
+    const tabs = [
+        { id: 'information', label: 'Information' },
+        { id: 'sessions', label: 'Sessions' },
+        // { id: 'progress', label: 'Progress' }
+    ];
 
     const renderTabBar = () => (
         <View style={styles.tabContainer}>
@@ -93,8 +118,8 @@ const PatientCardScreen = () => {
         </View>
     );
 
-    const renderSessionCard = (session, index) => (
-        <View key={index} style={styles.sessionCard}>
+    const renderSessionCard = (session, idx) => (
+        <View key={idx} style={styles.sessionCard}>
             <View style={styles.sessionHeader}>
                 <View style={[styles.sessionTypeIcon, { backgroundColor: COLORS.primaryLight }]}>
                     <Ionicons name="people" size={16} color={COLORS.primary} />
@@ -113,20 +138,28 @@ const PatientCardScreen = () => {
         </View>
     );
 
-    const sessionsData = [
-        {
-            type: "CBT Session #8",
-            date: "June 19, 2025",
-            completed: true,
-            notes: "Patient showed good progress with anxiety management techniques"
-        },
-        {
-            type: "CBT Session #9",
-            date: "June 26, 2025",
-            completed: false,
-            notes: "Focus on cognitive restructuring and thought challenging"
-        }
-    ];
+    useEffect(() => {
+        if (!patientData.user_id) return;
+        setLoadingSessions(true);
+        const fetchSessions = async () => {
+            try {
+                // Fetch both confirmed and completed appointments
+                console.log('UserId: ', patientData.user_id)
+                const result = await getUserAppointments(patientData.user_id, { status: 'confirmed,completed', limit: 50 });
+                console.log('Session: ', result)
+                if (result.success && result.appointments) {
+                    setSessions(result.appointments);
+                } else {
+                    setSessions([]);
+                }
+            } catch (e) {
+                setSessions([]);
+            } finally {
+                setLoadingSessions(false);
+            }
+        };
+        fetchSessions();
+    }, [patientData.user_id]);
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -147,7 +180,7 @@ const PatientCardScreen = () => {
                     <Image source={{ uri: patientData.avatar }} style={styles.patientAvatar} />
                     <View style={styles.patientInfo}>
                         <Text style={styles.patientName}>{patientData.name}</Text>
-                        <Text style={styles.patientDetails}>{patientData.age} years • {patientData.condition}</Text>
+                        <Text style={styles.patientDetails}>{calculateAge(patientData.age)} years • {truncateWords({text: patientData.description, maxWords: 5})}</Text>
                     </View>
                     <View style={styles.patientActions}>
                         <TouchableOpacity style={styles.actionButton}>
@@ -161,12 +194,12 @@ const PatientCardScreen = () => {
 
                 {/* Mental Health Metrics */}
                 <View style={styles.metricsContainer}>
-                    {renderMetricCard("happy", "Mood", patientData.moodScore, "/10", COLORS.success, COLORS.success + '20')}
+                    {renderMetricCard("happy", "Mood", patientData.mood, "/10", COLORS.success, COLORS.success + '20')}
                     {renderMetricCard("checkmark-circle", "Sessions", patientData.sessionsCompleted, "Done", COLORS.primary, COLORS.primaryLight)}
                 </View>
 
                 {/* Next Session Card */}
-                <View style={styles.nextSessionCard}>
+                {/* <View style={styles.nextSessionCard}>
                     <View style={styles.nextSessionHeader}>
                         <View style={[styles.nextSessionIcon, { backgroundColor: COLORS.warning + '20' }]}>
                             <Ionicons name="calendar" size={20} color={COLORS.warning} />
@@ -184,7 +217,7 @@ const PatientCardScreen = () => {
                             <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
                         </TouchableOpacity>
                     </View>
-                </View>
+                </View> */}
 
                 {/* Tab Bar */}
                 {renderTabBar()}
@@ -195,20 +228,16 @@ const PatientCardScreen = () => {
                         <Text style={styles.sectionTitle}>Personal Information</Text>
                         <View style={styles.infoContainer}>
                             {renderInformationRow("Full Name", patientData.name, "person")}
-                            {renderInformationRow("Date of Birth", patientData.dateOfBirth, "calendar")}
-                            {renderInformationRow("Age", `${patientData.age} years`, "time")}
+                            {renderInformationRow("Date of Birth", convertToLocalDate(patientData.age), "calendar")}
+                            {renderInformationRow("Age", `${calculateAge(patientData.age)} years`, "time")}
                             {renderInformationRow("Gender", patientData.gender, "male-female")}
-                            {renderInformationRow("Blood Type", patientData.bloodType, "water")}
-                            {renderInformationRow("Height", patientData.height, "resize")}
-                            {renderInformationRow("Weight", patientData.weight, "fitness")}
                         </View>
 
                         <Text style={styles.sectionTitle}>Contact Information</Text>
                         <View style={styles.infoContainer}>
-                            {renderInformationRow("Phone Number", patientData.phoneNumber, "call")}
+                            {renderInformationRow("Phone Number", patientData.phone, "call")}
                             {renderInformationRow("Email", patientData.email, "mail")}
                             {renderInformationRow("Address", patientData.address, "location")}
-                            {renderInformationRow("Emergency Contact", patientData.emergencyContact, "alert-circle")}
                         </View>
 
                         <Text style={styles.sectionTitle}>Professional Information</Text>
@@ -216,7 +245,7 @@ const PatientCardScreen = () => {
                             {renderInformationRow("Occupation", patientData.occupation, "briefcase")}
                         </View>
 
-                        <Text style={styles.sectionTitle}>Current Medications</Text>
+                        {/* <Text style={styles.sectionTitle}>Current Medications</Text>
                         <View style={styles.medicationsContainer}>
                             {patientData.medications.map((medication, index) => (
                                 <View key={index} style={styles.medicationItem}>
@@ -226,7 +255,7 @@ const PatientCardScreen = () => {
                                     <Text style={styles.medicationText}>{medication}</Text>
                                 </View>
                             ))}
-                        </View>
+                        </View> */}
                     </View>
                 )}
 
@@ -234,12 +263,20 @@ const PatientCardScreen = () => {
                     <View style={styles.tabContent}>
                         <Text style={styles.sectionTitle}>Therapy Sessions</Text>
                         <View style={styles.sessionsContainer}>
-                            {sessionsData.map(renderSessionCard)}
+                            {loadingSessions ? (
+                                <ActivityIndicator size="large" color={COLORS.primary} />
+                            ) : sessions.length === 0 ? (
+                                <Text style={{ color: COLORS.textSecondary, textAlign: 'center', marginTop: 16 }}>
+                                    No past sessions found.
+                                </Text>
+                            ) : (
+                                sessions.map((session, idx) => renderSessionCard(session, idx))
+                            )}
                         </View>
                     </View>
                 )}
 
-                {activeTab === 'progress' && (
+                {/* {activeTab === 'progress' && (
                     <View style={styles.tabContent}>
                         <Text style={styles.sectionTitle}>Progress Overview</Text>
                         <View style={styles.progressContainer}>
@@ -272,7 +309,7 @@ const PatientCardScreen = () => {
                             </View>
                         </View>
                     </View>
-                )}
+                )} */}
             </ScrollView>
 
             <StatusBar style="dark" />

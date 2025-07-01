@@ -1,47 +1,47 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import COLORS from '../../constants/theme';
 
-const books = [
-  {
-    id: '1',
-    title: 'The Mindful Path',
-    description: 'A guide to mindfulness and meditation for beginners.',
-    image: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/mindful-path.pdf',
-  },
-  {
-    id: '2',
-    title: 'Resilience Roadmap',
-    description: 'Building resilience through practical exercises and stories.',
-    image: 'https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/resilience-roadmap.pdf',
-  },
-  {
-    id: '3',
-    title: 'Calm in Chaos',
-    description: 'Techniques to find calm and clarity in stressful times.',
-    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-    url: 'https://www.example.com/calm-in-chaos.pdf',
-  },
-];
+interface Resource {
+  id: number;
+  title: string;
+  description: string;
+  image?: string;
+  preview_image_url?: string;
+  file_url: string;
+  type: string;
+  [key: string]: any;
+}
 
 const BooksScreen = () => {
-  const renderItem = ({ item }: { item: typeof books[0] }) => (
+  const params = useLocalSearchParams();
+  // resources param is a JSON stringified array
+  const resources: Resource[] | null = useMemo(() => {
+    if (params.resources) {
+      try {
+        return JSON.parse(params.resources as string);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [params.resources]);
+
+  const renderItem = ({ item }: { item: Resource }) => (
     <TouchableOpacity
       key={item.id}
       style={styles.card}
       activeOpacity={0.85}
       onPress={() => router.push({
         pathname: '/(screens)/ResourceViewerScreen',
-        params: { title: item.title, url: item.url }
+        params: { title: item.title, file_url: item.file_url }
       })}
     >
       <View style={styles.cardBody}>
-        <Image source={{ uri: item.image }} style={styles.thumbnailRow} />
+        <Image source={{ uri: item.preview_image_url || item.image || undefined }} style={styles.thumbnailRow} />
         <Text style={styles.cardTitleRow}>{item.title}</Text>
         <Text style={styles.cardDescriptionRow}>{item.description}</Text>
         <TouchableOpacity
@@ -73,15 +73,25 @@ const BooksScreen = () => {
           <Text style={styles.headerDescription}>Browse and read mental health books to support your journey.</Text>
         </View>
       </View>
-      <FlatList
-        data={books}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.cardRow}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      />
+      {!resources ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : resources.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: COLORS.grey, fontSize: 16 }}>No books found.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={resources}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.cardRow}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 };
