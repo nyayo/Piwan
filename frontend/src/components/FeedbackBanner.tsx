@@ -1,25 +1,12 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import React from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons';
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 const FeedbackBanner = () => {
-    return (
-        <View style={styles.feedbackBanner}>
-        <View style={styles.feedbackContent}>
-            <Text style={styles.feedbackTitle}>Feedback for</Text>
-            <Text style={styles.feedbackSubtitle}>50 VITAMINS</Text>
-        </View>
-        <View style={styles.feedbackIcon}>
-            <TouchableOpacity style={styles.feedbackArrow}>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.white} />
-            </TouchableOpacity>
-        </View>
-        </View>
-    );
-}
+    const { COLORS } = useTheme();
 
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     feedbackBanner: {
         backgroundColor: '#ff8a65',
         borderRadius: 16,
@@ -53,5 +40,19 @@ const styles = StyleSheet.create({
         padding: 8,
     },
 })
+    return (
+        <View style={styles.feedbackBanner}>
+        <View style={styles.feedbackContent}>
+            <Text style={styles.feedbackTitle}>Feedback for</Text>
+            <Text style={styles.feedbackSubtitle}>50 VITAMINS</Text>
+        </View>
+        <View style={styles.feedbackIcon}>
+            <TouchableOpacity style={styles.feedbackArrow}>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.white} />
+            </TouchableOpacity>
+        </View>
+        </View>
+    );
+}
 
 export default FeedbackBanner

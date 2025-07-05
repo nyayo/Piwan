@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react'
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 type ModernTabButton = {
     title: string;
@@ -11,31 +11,9 @@ type ModernTabButton = {
 }
 
 const ModernTabButton = ({title, icon, isActive, onPress}: ModernTabButton) => {
-    return (
-    <TouchableOpacity
-        style={[styles.modernTabButton, isActive && styles.modernTabButtonActive]}
-        onPress={onPress}
-        activeOpacity={0.7}
-    >
-        <View style={styles.tabButtonContent}>
-            {icon && (
-            <Ionicons 
-                name={icon} 
-                size={18} 
-                color={isActive ? '#FFFFFF' : COLORS.grey} 
-                style={styles.tabIcon}
-            />
-            )}
-            <Text style={[styles.modernTabText, isActive && styles.modernTabTextActive]}>
-            {title}
-            </Text>
-        </View>
-        {isActive && <View style={styles.tabIndicator} />}
-        </TouchableOpacity>
-    );
-}
+    const { COLORS } = useTheme();
 
-const styles = StyleSheet.create({  
+    const styles = StyleSheet.create({  
     modernTabButton: {
         flex: 1,
         paddingVertical: 12,
@@ -81,5 +59,28 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
 })
+    return (
+    <TouchableOpacity
+        style={[styles.modernTabButton, isActive && styles.modernTabButtonActive]}
+        onPress={onPress}
+        activeOpacity={0.7}
+    >
+        <View style={styles.tabButtonContent}>
+            {icon && (
+            <Ionicons 
+                name={icon} 
+                size={18} 
+                color={isActive ? '#FFFFFF' : COLORS.grey} 
+                style={styles.tabIcon}
+            />
+            )}
+            <Text style={[styles.modernTabText, isActive && styles.modernTabTextActive]}>
+            {title}
+            </Text>
+        </View>
+        {isActive && <View style={styles.tabIndicator} />}
+        </TouchableOpacity>
+    );
+}
 
 export default ModernTabButton;

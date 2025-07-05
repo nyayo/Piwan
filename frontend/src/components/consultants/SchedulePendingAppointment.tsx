@@ -3,56 +3,13 @@ import React from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { calculateAge } from '../../helper/calculateAge';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { formatTime, convertToLocalDate } from '../../helper/convertDateTime';
 
 const SchedulePendingAppointment = ({appointment, rejectAppointment, confirmAppointment}) => {
-    return (
-        <View key={appointment.id} style={styles.pendingAppointmentCard}>
-            <View style={styles.pendingAppointmentHeader}>
-                <Image source={{ uri: appointment.profile_image }} style={styles.pendingPatientAvatar} />
-                <View style={styles.pendingAppointmentInfo}>
-                    <Text style={styles.pendingPatientName}>{appointment.user_name}</Text>
-                    <Text style={styles.pendingPatientDetails}>{calculateAge(appointment.dob)} years • {appointment.condition}</Text>
-                    <Text style={styles.pendingAppointmentTime}>
-                        {convertToLocalDate(appointment.appointment_datetime)} at {formatTime(appointment.appointment_datetime)}
-                    </Text>
-                    <Text style={styles.pendingDuration}>Duration: {appointment.duration_minutes}</Text>
-                </View>
-                <View style={styles.pendingStatusBadge}>
-                    <Text style={styles.pendingStatusText}>Pending</Text>
-                </View>
-            </View>
-            
-            {appointment.notes && (
-                <View style={styles.pendingNotesContainer}>
-                    <Text style={styles.pendingNotesLabel}>Notes:</Text>
-                    <Text style={styles.pendingNotes}>{appointment.notes}</Text>
-                </View>
-            )}
-            
-            <View style={styles.pendingActionsContainer}>
-                <TouchableOpacity 
-                    style={styles.rejectButton}
-                    onPress={() => rejectAppointment(appointment.id)}
-                >
-                    <Ionicons name="close" size={16} color={COLORS.error} />
-                    <Text style={styles.rejectButtonText}>Reject</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                    style={styles.confirmButton}
-                    onPress={() => confirmAppointment(appointment.id)}
-                >
-                    <Ionicons name="checkmark" size={16} color={COLORS.white} />
-                    <Text style={styles.confirmButtonText}>Confirm</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
-}
+    const { COLORS } = useTheme();
 
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     pendingAppointmentCard: {
         backgroundColor: COLORS.cardBackground,
         borderRadius: 16,
@@ -164,5 +121,49 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 })
+    return (
+        <View key={appointment.id} style={styles.pendingAppointmentCard}>
+            <View style={styles.pendingAppointmentHeader}>
+                <Image source={{ uri: appointment.profile_image }} style={styles.pendingPatientAvatar} />
+                <View style={styles.pendingAppointmentInfo}>
+                    <Text style={styles.pendingPatientName}>{appointment.user_name}</Text>
+                    <Text style={styles.pendingPatientDetails}>{calculateAge(appointment.dob)} years • {appointment.condition}</Text>
+                    <Text style={styles.pendingAppointmentTime}>
+                        {convertToLocalDate(appointment.appointment_datetime)} at {formatTime(appointment.appointment_datetime)}
+                    </Text>
+                    <Text style={styles.pendingDuration}>Duration: {appointment.duration_minutes}</Text>
+                </View>
+                <View style={styles.pendingStatusBadge}>
+                    <Text style={styles.pendingStatusText}>Pending</Text>
+                </View>
+            </View>
+            
+            {appointment.notes && (
+                <View style={styles.pendingNotesContainer}>
+                    <Text style={styles.pendingNotesLabel}>Notes:</Text>
+                    <Text style={styles.pendingNotes}>{appointment.notes}</Text>
+                </View>
+            )}
+            
+            <View style={styles.pendingActionsContainer}>
+                <TouchableOpacity 
+                    style={styles.rejectButton}
+                    onPress={() => rejectAppointment(appointment.id)}
+                >
+                    <Ionicons name="close" size={16} color={COLORS.error} />
+                    <Text style={styles.rejectButtonText}>Reject</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                    style={styles.confirmButton}
+                    onPress={() => confirmAppointment(appointment.id)}
+                >
+                    <Ionicons name="checkmark" size={16} color={COLORS.white} />
+                    <Text style={styles.confirmButtonText}>Confirm</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+}
 
 export default SchedulePendingAppointment;

@@ -3,73 +3,16 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react'
 
 import { convertToLocalDate } from '../../helper/convertDateTime';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import truncateWords from '../../helper/truncateWords';
 
 const SchedulePastAppointment = ({appointment, onViewReview}) => {
+    const { COLORS } = useTheme();
     // Handle rating from the joined reviews table
     const hasReview = appointment.review_id !== null;
     const rating = appointment.rating || 0;
-    
-    return (
-        <View key={appointment.id} style={styles.pastAppointmentCard}>
-            <View style={styles.pastAppointmentHeader}>
-                <Text style={styles.pastAppointmentDate}>{convertToLocalDate(appointment.appointment_datetime)}</Text>
-                <View style={styles.reviewSection}>
-                    {hasReview ? (
-                        <TouchableOpacity 
-                            style={styles.ratingContainer}
-                            onPress={() => onViewReview && onViewReview(appointment)}
-                        >
-                            {[...Array(5)].map((_, i) => (
-                                <Ionicons
-                                    key={i}
-                                    name="star"
-                                    size={12}
-                                    color={i < rating ? COLORS.warning : COLORS.lightGrey}
-                                />
-                            ))}
-                            <Text style={styles.ratingText}>({rating})</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <View style={styles.noReviewContainer}>
-                            <Text style={styles.noReviewText}>No review</Text>
-                        </View>
-                    )}
-                </View>
-            </View>
-            <Text style={styles.pastPatientName}>{appointment.user_name}</Text>
-            <Text style={styles.pastCondition}>{truncateWords({ text: appointment.description, maxWords: 5 })}</Text>
-            <Text style={styles.pastNotes}>{truncateWords({ text: appointment.title, maxWords: 5 })}</Text>
-            
-            {/* Show review text if available */}
-            {hasReview && appointment.review_text && (
-                <View style={styles.reviewTextContainer}>
-                    <Text style={styles.reviewLabel}>Review:</Text>
-                    <Text style={styles.reviewText}>
-                        {truncateWords({ text: appointment.review_text, maxWords: 10 })}
-                    </Text>
-                </View>
-            )}
-            
-            <View style={styles.pastAppointmentFooter}>
-                <Text style={styles.pastDuration}>{appointment.duration_minutes} mins</Text>
-                <View style={styles.footerRight}>
-                    {hasReview && (
-                        <Text style={styles.reviewDate}>
-                            Reviewed {convertToLocalDate(appointment.review_date)}
-                        </Text>
-                    )}
-                    <Text style={[styles.pastStatus, { color: appointment.status === 'completed' ? COLORS.success : COLORS.error }]}>
-                        {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                    </Text>
-                </View>
-            </View>
-        </View>
-    );
-}
 
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     pastAppointmentCard: {
         backgroundColor: COLORS.cardBackground,
         borderRadius: 12,
@@ -173,5 +116,63 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 })
+    
+    return (
+        <View key={appointment.id} style={styles.pastAppointmentCard}>
+            <View style={styles.pastAppointmentHeader}>
+                <Text style={styles.pastAppointmentDate}>{convertToLocalDate(appointment.appointment_datetime)}</Text>
+                <View style={styles.reviewSection}>
+                    {hasReview ? (
+                        <TouchableOpacity 
+                            style={styles.ratingContainer}
+                            onPress={() => onViewReview && onViewReview(appointment)}
+                        >
+                            {[...Array(5)].map((_, i) => (
+                                <Ionicons
+                                    key={i}
+                                    name="star"
+                                    size={12}
+                                    color={i < rating ? COLORS.warning : COLORS.lightGrey}
+                                />
+                            ))}
+                            <Text style={styles.ratingText}>({rating})</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.noReviewContainer}>
+                            <Text style={styles.noReviewText}>No review</Text>
+                        </View>
+                    )}
+                </View>
+            </View>
+            <Text style={styles.pastPatientName}>{appointment.user_name}</Text>
+            <Text style={styles.pastCondition}>{truncateWords({ text: appointment.description, maxWords: 5 })}</Text>
+            <Text style={styles.pastNotes}>{truncateWords({ text: appointment.title, maxWords: 5 })}</Text>
+            
+            {/* Show review text if available */}
+            {hasReview && appointment.review_text && (
+                <View style={styles.reviewTextContainer}>
+                    <Text style={styles.reviewLabel}>Review:</Text>
+                    <Text style={styles.reviewText}>
+                        {truncateWords({ text: appointment.review_text, maxWords: 10 })}
+                    </Text>
+                </View>
+            )}
+            
+            <View style={styles.pastAppointmentFooter}>
+                <Text style={styles.pastDuration}>{appointment.duration_minutes} mins</Text>
+                <View style={styles.footerRight}>
+                    {hasReview && (
+                        <Text style={styles.reviewDate}>
+                            Reviewed {convertToLocalDate(appointment.review_date)}
+                        </Text>
+                    )}
+                    <Text style={[styles.pastStatus, { color: appointment.status === 'completed' ? COLORS.success : COLORS.error }]}>
+                        {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                    </Text>
+                </View>
+            </View>
+        </View>
+    );
+}
 
 export default SchedulePastAppointment;

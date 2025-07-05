@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import CustomTextInput from '../../components/CustomTextInput';
 import KeyboardAwareScrollView from '../../components/KeyboardAwareView';
 import { useAuth } from '../../context/authContext';
@@ -42,6 +42,8 @@ const PrivacySecurityScreen = () => {
         new: false,
         confirm: false
     });
+    const { COLORS, mode } = useTheme();
+    const statusBarStyle = mode === 'dark' || COLORS.background === '#000' ? 'light' : 'dark';
     
     // Privacy Settings State
     const [privacySettings, setPrivacySettings] = useState<PrivacySettingsProps>({
@@ -134,6 +136,170 @@ const PrivacySecurityScreen = () => {
             ]
         );
     };
+
+    const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background,
+    },
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        paddingTop: 24,
+        backgroundColor: COLORS.background,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+    },
+    backButton: {
+        padding: 8,
+        marginRight: 12,
+    },
+    headerTextContainer: {
+        flex: 1,
+    },
+    headerTitle: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: COLORS.textDark || '#1a1a1a',
+        letterSpacing: -0.5,
+    },
+    headerSubtitle: {
+        fontSize: 14,
+        color: COLORS.grey || '#666',
+        marginTop: 2,
+        fontWeight: '400',
+    },
+    section: {
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+        backgroundColor: COLORS.background,
+        marginBottom: 12,
+        borderRadius: 10,
+    },
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: COLORS.textDark,
+        letterSpacing: 0.5,
+        marginBottom: 16,
+        textTransform: 'uppercase',
+    },
+    passwordInputContainer: {
+        position: 'relative',
+        marginBottom: 20,
+    },
+    inputContainer: {
+        width: '100%',
+    },
+    textInput: {
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        paddingRight: 50,
+        fontSize: 16,
+        borderWidth: 1.5,
+        borderColor: COLORS.grey + '40',
+        borderRadius: 12,
+        backgroundColor: COLORS.inputBackground,
+        color: COLORS.textPrimary,
+    },
+    textInputFocused: {
+        borderColor: COLORS.primary,
+        borderWidth: 2,
+        shadowColor: COLORS.primary,
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    eyeIcon: {
+        position: 'absolute',
+        right: 16,
+        top: 50,
+        transform: [{ translateY: -10 }],
+    },
+    changePasswordButton: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: COLORS.primary,
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    buttonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.white,
+    },
+    securityButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.grey + '20',
+    },
+    securityButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    securityButtonText: {
+        marginLeft: 12,
+        flex: 1,
+    },
+    securityButtonTitle: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: COLORS.textDark,
+        marginBottom: 2,
+    },
+    securityButtonDescription: {
+        fontSize: 14,
+        color: COLORS.grey,
+    },
+    dangerSection: {
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+        backgroundColor: COLORS.background,
+        marginBottom: 40,
+    },
+    dangerSectionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: COLORS.error || '#FF3B30',
+        letterSpacing: 0.5,
+        marginBottom: 16,
+        textTransform: 'uppercase',
+    },
+    deleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.error + '40' || '#FF3B30' + '40',
+        backgroundColor: COLORS.error + '10' || '#FF3B30' + '10',
+    },
+    deleteButtonText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: COLORS.error || '#FF3B30',
+        marginLeft: 12,
+    },
+});
 
     return (
         <View style={styles.container}>
@@ -330,173 +496,9 @@ const PrivacySecurityScreen = () => {
                     </View>
                 </FormProvider>
             </KeyboardAwareScrollView>
-            <StatusBar style="dark" />
+            <StatusBar style={statusBarStyle} />
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fafafa',
-    },
-    headerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        paddingTop: 24,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    backButton: {
-        padding: 8,
-        marginRight: 12,
-    },
-    headerTextContainer: {
-        flex: 1,
-    },
-    headerTitle: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: COLORS.textDark || '#1a1a1a',
-        letterSpacing: -0.5,
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: COLORS.grey || '#666',
-        marginTop: 2,
-        fontWeight: '400',
-    },
-    section: {
-        paddingHorizontal: 20,
-        paddingVertical: 20,
-        backgroundColor: '#fff',
-        marginBottom: 12,
-        borderRadius: 10,
-    },
-    sectionTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: COLORS.textDark,
-        letterSpacing: 0.5,
-        marginBottom: 16,
-        textTransform: 'uppercase',
-    },
-    passwordInputContainer: {
-        position: 'relative',
-        marginBottom: 20,
-    },
-    inputContainer: {
-        width: '100%',
-    },
-    textInput: {
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        paddingRight: 50,
-        fontSize: 16,
-        borderWidth: 1.5,
-        borderColor: COLORS.grey + '40',
-        borderRadius: 12,
-        backgroundColor: COLORS.white,
-        color: COLORS.textPrimary,
-    },
-    textInputFocused: {
-        borderColor: COLORS.primary,
-        borderWidth: 2,
-        shadowColor: COLORS.primary,
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    eyeIcon: {
-        position: 'absolute',
-        right: 16,
-        top: 50,
-        transform: [{ translateY: -10 }],
-    },
-    changePasswordButton: {
-        backgroundColor: COLORS.primary,
-        paddingVertical: 16,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: COLORS.primary,
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 3,
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: COLORS.white,
-    },
-    securityButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.grey + '20',
-    },
-    securityButtonContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-    },
-    securityButtonText: {
-        marginLeft: 12,
-        flex: 1,
-    },
-    securityButtonTitle: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: COLORS.textDark,
-        marginBottom: 2,
-    },
-    securityButtonDescription: {
-        fontSize: 14,
-        color: COLORS.grey,
-    },
-    dangerSection: {
-        paddingHorizontal: 20,
-        paddingVertical: 20,
-        backgroundColor: '#fff',
-        marginBottom: 40,
-    },
-    dangerSectionTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: COLORS.error || '#FF3B30',
-        letterSpacing: 0.5,
-        marginBottom: 16,
-        textTransform: 'uppercase',
-    },
-    deleteButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: COLORS.error + '40' || '#FF3B30' + '40',
-        backgroundColor: COLORS.error + '10' || '#FF3B30' + '10',
-    },
-    deleteButtonText: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: COLORS.error || '#FF3B30',
-        marginLeft: 12,
-    },
-});
 
 export default PrivacySecurityScreen;

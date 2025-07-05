@@ -1,11 +1,12 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native'
 import React, { useCallback, useState } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons';
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { data, FeedType } from '../data/feed-data';
 
 const CommunityFeedContent = () => {
     const [feedPosts, setFeedPosts] = useState<FeedType[]>(data);
+    const { COLORS } = useTheme();
 
     const handleLikePost = useCallback((postId:number) => {
         setFeedPosts(prevPosts => 
@@ -42,75 +43,7 @@ const CommunityFeedContent = () => {
         return num.toString();
     }, []);
 
-    return (
-        <View style={styles.feedContainer}>
-        {feedPosts.map((post) => (
-            <View key={post.id} style={styles.feedPost}>
-            <View style={styles.postHeader}>
-                <Image
-                style={styles.userAvatar}
-                source={{ uri: post.user.avatar }}
-                />
-                <View style={styles.userInfo}>
-                <Text style={styles.userName}>{post.user.name}</Text>
-                <Text style={styles.userHandle}>{post.user.username} • {post.timestamp}</Text>
-                </View>
-            </View>
-
-            <Text style={styles.postContent}>{post.content}</Text>
-
-            {post.image && (
-                <Image
-                style={styles.postImage}
-                source={{ uri: post.image }}
-                />
-            )}
-
-            <View style={styles.postActions}>
-                <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => handleLikePost(post.id)}
-                >
-                <Ionicons 
-                    name={post.isLiked ? "heart" : "heart-outline"} 
-                    size={20} 
-                    color={post.isLiked ? "#FF4444" : COLORS.grey} 
-                />
-                <Text style={[styles.actionText, post.isLiked && styles.likedText]}>
-                    {formatNumber(post.likes)}
-                </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => handleRepostPost(post.id)}
-                >
-                <Ionicons 
-                    name={post.isReposted ? "repeat" : "repeat-outline"} 
-                    size={20} 
-                    color={post.isReposted ? "#50C878" : COLORS.grey} 
-                />
-                <Text style={[styles.actionText, post.isReposted && styles.repostedText]}>
-                    {formatNumber(post.reposts)}
-                </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.actionButton}>
-                <Ionicons name="chatbubble-outline" size={20} color={COLORS.grey} />
-                <Text style={styles.actionText}>Reply</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.actionButton}>
-                <Ionicons name="share-outline" size={20} color={COLORS.grey} />
-                </TouchableOpacity>
-            </View>
-            </View>
-        ))}
-        </View>
-    );
-}
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     feedContainer: {
         gap: 16,
     },
@@ -192,5 +125,73 @@ const styles = StyleSheet.create({
         color: '#50C878',
     },
 })
+
+    return (
+        <View style={styles.feedContainer}>
+        {feedPosts.map((post) => (
+            <View key={post.id} style={styles.feedPost}>
+            <View style={styles.postHeader}>
+                <Image
+                style={styles.userAvatar}
+                source={{ uri: post.user.avatar }}
+                />
+                <View style={styles.userInfo}>
+                <Text style={styles.userName}>{post.user.name}</Text>
+                <Text style={styles.userHandle}>{post.user.username} • {post.timestamp}</Text>
+                </View>
+            </View>
+
+            <Text style={styles.postContent}>{post.content}</Text>
+
+            {post.image && (
+                <Image
+                style={styles.postImage}
+                source={{ uri: post.image }}
+                />
+            )}
+
+            <View style={styles.postActions}>
+                <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => handleLikePost(post.id)}
+                >
+                <Ionicons 
+                    name={post.isLiked ? "heart" : "heart-outline"} 
+                    size={20} 
+                    color={post.isLiked ? "#FF4444" : COLORS.grey} 
+                />
+                <Text style={[styles.actionText, post.isLiked && styles.likedText]}>
+                    {formatNumber(post.likes)}
+                </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => handleRepostPost(post.id)}
+                >
+                <Ionicons 
+                    name={post.isReposted ? "repeat" : "repeat-outline"} 
+                    size={20} 
+                    color={post.isReposted ? "#50C878" : COLORS.grey} 
+                />
+                <Text style={[styles.actionText, post.isReposted && styles.repostedText]}>
+                    {formatNumber(post.reposts)}
+                </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton}>
+                <Ionicons name="chatbubble-outline" size={20} color={COLORS.grey} />
+                <Text style={styles.actionText}>Reply</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton}>
+                <Ionicons name="share-outline" size={20} color={COLORS.grey} />
+                </TouchableOpacity>
+            </View>
+            </View>
+        ))}
+        </View>
+    );
+}
 
 export default CommunityFeedContent;

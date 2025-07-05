@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import ScheduleAppointmentCard from '../../components/consultants/ScheduleAppointmentCard';
 import SchedulePastAppointment from '../../components/consultants/SchedulePastAppointment';
 import SchedulePendingAppointment from '../../components/consultants/SchedulePendingAppointment';
@@ -49,6 +49,7 @@ interface AuthContext {
 
 const ScheduleScreen = () => {
     const auth = useAuth() as AuthContext;
+    const { COLORS, mode } = useTheme();
     const user = auth?.user;
     const consultantId = user?.id;
     const today = new Date();
@@ -72,6 +73,8 @@ const ScheduleScreen = () => {
         { id: 'week', label: 'This Week', icon: 'calendar' },
         { id: 'history', label: 'History', icon: 'time' },
     ];
+
+    const statusBarStyle = mode === 'dark' || COLORS.background === '#000' ? 'light' : 'dark';
 
     // Add functions to handle pending appointment actions
     const confirmAppointment = async (appointmentId: string | number) => {
@@ -743,66 +746,10 @@ const handleToday = () => setSelectedDate(new Date());
         }
     };
 
-    return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>My Schedule</Text>
-                    <View style={styles.headerNavButtons}>
-                        <TouchableOpacity onPress={handlePrevDay} style={styles.headerIconButton}>
-                            <Ionicons name="chevron-back" size={18} color={COLORS.textDark} />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={handleToday} style={styles.todayButton}>
-                            <Text style={styles.todayButtonText}>Today</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.headerDateText}>{formatHeaderDate(selectedDate)}</Text>
-                        <TouchableOpacity onPress={handleNextDay} style={styles.headerIconButton}>
-                            <Ionicons name="chevron-forward" size={18} color={COLORS.textDark} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-                
-                <View style={styles.greetingSection}>
-                    <Text style={styles.greeting}>Hello, Dr. {user?.first_name} {user?.last_name} 👋</Text>
-                    <Text style={styles.subGreeting}>{subGreetingText}</Text>
-                </View>
-            </View>
-
-            {/* Tab Bar */}
-            {renderTabBar()}
-
-            {/* Content */}
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.contentContainer}>
-                {renderContent()}
-            </ScrollView>
-
-            {/* Floating Action Button */}
-            <TouchableOpacity 
-                style={styles.fab}
-                onPress={() => setShowBlockTimeModal(true)}
-            >
-                <Ionicons name="add" size={24} color={COLORS.white} />
-            </TouchableOpacity>
-
-            {/* Block Time Modal */}
-            <BlockTimeModal 
-                showBlockTimeModal={showBlockTimeModal} 
-                setBlockTimeData={setBlockTimeData} 
-                setShowBlockTimeModal={setShowBlockTimeModal} 
-                blockTimeData={blockTimeData} 
-                onConfirm={confirmBlockTimeSlot}
-            />
-
-            <StatusBar style="dark" />
-        </SafeAreaView>
-    );
-};
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.white,
+        backgroundColor: COLORS.background,
     },
     contentContainer: {
         flex: 1,
@@ -830,7 +777,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 2,
-        backgroundColor: COLORS.lightGrey,
+        backgroundColor: COLORS.cardBackground,
         borderRadius: 12,
         paddingHorizontal: 8,
         paddingVertical: 5,
@@ -877,9 +824,9 @@ const styles = StyleSheet.create({
     },
     // Tab Styles
     tabContainer: {
-        backgroundColor: COLORS.white,
+        backgroundColor: COLORS.background,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.lightGrey,
+        borderBottomColor: COLORS.border,
         paddingHorizontal: 20,
         paddingVertical: 10,
     },
@@ -890,7 +837,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         marginRight: 8,
         borderRadius: 20,
-        backgroundColor: COLORS.lightGrey,
+        backgroundColor: COLORS.cardBackground,
         gap: 6,
     },
     activeTab: {
@@ -918,7 +865,7 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
         borderRadius: 38,
         minWidth: 50,
-        backgroundColor: COLORS.white,
+        backgroundColor: COLORS.background,
         borderWidth: 1.5,
         borderColor: 'transparent',
     },
@@ -929,7 +876,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: COLORS.cardBackground,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 6,
@@ -975,7 +922,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginHorizontal: 20,
         marginBottom: 20,
-        backgroundColor: COLORS.lightGrey,
+        backgroundColor: COLORS.cardBackground,
         borderRadius: 12,
         padding: 4,
     },
@@ -1006,7 +953,7 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: COLORS.lightGrey,
+        borderColor: COLORS.border,
     },
     timeSlotHeader: {
         flexDirection: 'row',
@@ -1256,5 +1203,61 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
+
+    return (
+        <SafeAreaView style={styles.container} edges={['top']}>
+            {/* Header */}
+            <View style={styles.header}>
+                <View style={styles.headerTop}>
+                    <Text style={styles.headerTitle}>My Schedule</Text>
+                    <View style={styles.headerNavButtons}>
+                        <TouchableOpacity onPress={handlePrevDay} style={styles.headerIconButton}>
+                            <Ionicons name="chevron-back" size={18} color={COLORS.textDark} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleToday} style={styles.todayButton}>
+                            <Text style={styles.todayButtonText}>Today</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.headerDateText}>{formatHeaderDate(selectedDate)}</Text>
+                        <TouchableOpacity onPress={handleNextDay} style={styles.headerIconButton}>
+                            <Ionicons name="chevron-forward" size={18} color={COLORS.textDark} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                
+                <View style={styles.greetingSection}>
+                    <Text style={styles.greeting}>Hello, Dr. {user?.first_name} {user?.last_name} 👋</Text>
+                    <Text style={styles.subGreeting}>{subGreetingText}</Text>
+                </View>
+            </View>
+
+            {/* Tab Bar */}
+            {renderTabBar()}
+
+            {/* Content */}
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.contentContainer}>
+                {renderContent()}
+            </ScrollView>
+
+            {/* Floating Action Button */}
+            <TouchableOpacity 
+                style={styles.fab}
+                onPress={() => setShowBlockTimeModal(true)}
+            >
+                <Ionicons name="add" size={24} color={COLORS.white} />
+            </TouchableOpacity>
+
+            {/* Block Time Modal */}
+            <BlockTimeModal 
+                showBlockTimeModal={showBlockTimeModal} 
+                setBlockTimeData={setBlockTimeData} 
+                setShowBlockTimeModal={setShowBlockTimeModal} 
+                blockTimeData={blockTimeData} 
+                onConfirm={confirmBlockTimeSlot}
+            />
+
+            <StatusBar style={statusBarStyle} />
+        </SafeAreaView>
+    );
+};
 
 export default ScheduleScreen;

@@ -1,235 +1,133 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
-import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import COLORS from '../../../constants/theme';
+import { useTheme } from '../../../context/ThemeContext';
 import { router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { fetchConsultantNotifications, markNotificationAsRead } from '../../../services/api';
 
-// Sample notification data
-const notificationsData = [
-  {
-    id: 1,
-    category: 'Today, 18 May 25',
-    notifications: [
-      {
-        id: 'n1',
-        type: 'message',
-        icon: 'mail-outline',
-        iconBg: '#E3F2FD',
-        iconColor: '#2196F3',
-        title: 'Patient Message',
-        description: 'Olivia Rose has sent you a...',
-        time: '2 hours ago',
-        isRead: false
-      },
-      {
-        id: 'n2',
-        type: 'report',
-        icon: 'document-text-outline',
-        iconBg: '#E8F5E8',
-        iconColor: '#4CAF50',
-        title: 'New Report Uploaded',
-        description: 'Report Type: X-Ray (Neck)...',
-        time: '4 hours ago',
-        isRead: false
-      },
-      {
-        id: 'n3',
-        type: 'appointment',
-        icon: 'calendar-outline',
-        iconBg: '#FFF3E0',
-        iconColor: '#FF9800',
-        title: 'New Appointment Added',
-        description: 'Patient Name: Sarah Hasten...',
-        time: '6 hours ago',
-        isRead: false
-      }
-    ]
-  },
-  {
-    id: 2,
-    category: 'Yesterday, 17 May 25',
-    notifications: [
-      {
-        id: 'n4',
-        type: 'system',
-        icon: 'checkmark-circle-outline',
-        iconBg: '#E8F5E8',
-        iconColor: '#4CAF50',
-        title: 'System Update Successful',
-        description: 'Your app has been...',
-        time: '1 day ago',
-        isRead: true
-      },
-      {
-        id: 'n5',
-        type: 'followup',
-        icon: 'time-outline',
-        iconBg: '#E3F2FD',
-        iconColor: '#2196F3',
-        title: 'Follow-Up Action Request',
-        description: 'A follow-up test request has...',
-        time: '1 day ago',
-        isRead: true
-      },
-      {
-        id: 'n6',
-        type: 'payment',
-        icon: 'card-outline',
-        iconBg: '#E8F5E8',
-        iconColor: '#4CAF50',
-        title: 'Payment Successful',
-        description: '$50 has been credited to...',
-        time: '1 day ago',
-        isRead: true
-      }
-    ]
-  }
-];
+// Helper to group notifications by date
+const groupNotificationsByDate = (notifications) => {
+  const groups = {};
+  notifications.forEach((notif) => {
+    const dateObj = new Date(notif.created_at);
+    const today = new Date();
+    let label;
+    if (
+      dateObj.getDate() === today.getDate() &&
+      dateObj.getMonth() === today.getMonth() &&
+      dateObj.getFullYear() === today.getFullYear()
+    ) {
+      label = `Today, ${today.getDate()} ${today.toLocaleString('default', { month: 'short' })} ${today.getFullYear().toString().slice(-2)}`;
+    } else {
+      label = `${dateObj.toLocaleString('default', { weekday: 'long' })}, ${dateObj.getDate()} ${dateObj.toLocaleString('default', { month: 'short' })} ${dateObj.getFullYear().toString().slice(-2)}`;
+    }
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(notif);
+  });
+  // Convert to array of {id, category, notifications}
+  return Object.entries(groups).map(([category, notifications], idx) => ({
+    id: idx + 1,
+    category,
+    notifications,
+  }));
+};
 
 const NotificationScreen = () => {
   const [activeTab, setActiveTab] = useState('All');
-  const [notifications, setNotifications] = useState(notificationsData);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleNotificationPress = (notificationId, categoryId) => {
-    // Mark notification as read
-    const updatedNotifications = notifications.map(category => {
-      if (category.id === categoryId) {
-        return {
-          ...category,
-          notifications: category.notifications.map(notif => 
-            notif.id === notificationId ? { ...notif, isRead: true } : notif
-          )
-        };
-      }
-      return category;
+  const notificationListener = useRef(null);
+  const responseListener = useRef(null);
+  const { COLORS } = useTheme();
+
+  // Fetch notifications from backend
+  const loadNotifications = async () => {
+    setLoading(true);
+    try {
+      const notifs = await fetchConsultantNotifications();
+      setNotifications(notifs);
+    } catch (e) {
+      // Optionally handle error
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+    // Listen for notifications received while app is foregrounded
+    notificationListener.current = Notifications.addNotificationReceivedListener(async (notification) => {
+      // Optionally, you can optimistically add to UI
+      await loadNotifications();
     });
-    setNotifications(updatedNotifications);
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(async (response) => {
+      // Optionally handle notification tap
+      await loadNotifications();
+    });
+    return () => {
+      if (notificationListener.current) notificationListener.current.remove();
+      if (responseListener.current) responseListener.current.remove();
+    };
+  }, []);
+
+  const handleNotificationPress = async (notificationId) => {
+    // Mark notification as read in backend and update UI
+    try {
+      await markNotificationAsRead(notificationId);
+      await loadNotifications();
+    } catch (e) {
+      // Optionally handle error
+    }
   };
 
   const getFilteredNotifications = () => {
+    let filtered = notifications;
     if (activeTab === 'Unread') {
-      return notifications.map(category => ({
-        ...category,
-        notifications: category.notifications.filter(notif => !notif.isRead)
-      })).filter(category => category.notifications.length > 0);
+      filtered = notifications.filter((notif) => !notif.is_read);
     }
-    return notifications;
+    return groupNotificationsByDate(filtered);
   };
 
-  const renderNotificationItem = (notification, categoryId) => (
+  const renderNotificationItem = (notification) => (
     <TouchableOpacity
       key={notification.id}
       style={[
         styles.notificationItem,
-        !notification.isRead && styles.unreadNotification
+        !notification.is_read && styles.unreadNotification
       ]}
-      onPress={() => handleNotificationPress(notification.id, categoryId)}
+      onPress={() => handleNotificationPress(notification.id)}
     >
-      <View style={[styles.iconContainer, { backgroundColor: notification.iconBg }]}>
-        <Ionicons 
-          name={notification.icon} 
-          size={20} 
-          color={notification.iconColor} 
+      <View style={[styles.iconContainer, { backgroundColor: notification.iconBg || '#FFF3E0' }]}> {/* fallback color */}
+        <Ionicons
+          name={notification.icon || 'calendar-outline'}
+          size={20}
+          color={notification.iconColor || '#FF9800'}
         />
       </View>
-      
       <View style={styles.notificationContent}>
         <Text style={[
           styles.notificationTitle,
-          !notification.isRead && styles.unreadTitle
+          !notification.is_read && styles.unreadTitle
         ]}>
           {notification.title}
         </Text>
         <Text style={styles.notificationDescription}>
-          {notification.description}
+          {notification.body}
         </Text>
         <Text style={styles.notificationTime}>
-          {notification.time}
+          {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
-      
-      {!notification.isRead && <View style={styles.unreadDot} />}
+      {!notification.is_read && <View style={styles.unreadDot} />}
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.textDark} />
-        </TouchableOpacity>
-        
-        <Text style={styles.headerTitle}>Notification</Text>
-        
-        <TouchableOpacity style={styles.searchButton}>
-          <Ionicons name="search-outline" size={24} color={COLORS.textDark} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === 'All' && styles.activeTabButton
-          ]}
-          onPress={() => setActiveTab('All')}
-        >
-          <Text style={[
-            styles.tabButtonText,
-            activeTab === 'All' && styles.activeTabButtonText
-          ]}>
-            All
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === 'Unread' && styles.activeTabButton
-          ]}
-          onPress={() => setActiveTab('Unread')}
-        >
-          <Text style={[
-            styles.tabButtonText,
-            activeTab === 'Unread' && styles.activeTabButtonText
-          ]}>
-            Unread
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Notifications List */}
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {getFilteredNotifications().map((category) => (
-          <View key={category.id} style={styles.categorySection}>
-            <Text style={styles.categoryTitle}>{category.category}</Text>
-            
-            <View style={styles.notificationsContainer}>
-              {category.notifications.map((notification) => 
-                renderNotificationItem(notification, category.id)
-              )}
-            </View>
-          </View>
-        ))}
-        
-        {getFilteredNotifications().length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="notifications-outline" size={64} color={COLORS.lightGrey} />
-            <Text style={styles.emptyStateText}>No notifications found</Text>
-          </View>
-        )}
-      </ScrollView>
-
-      <StatusBar style="dark" />
-    </SafeAreaView>
-  );
-};
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
@@ -362,5 +260,77 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 });
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={COLORS.textDark} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Notification</Text>
+        <TouchableOpacity style={styles.searchButton}>
+          <Ionicons name="search-outline" size={24} color={COLORS.textDark} />
+        </TouchableOpacity>
+      </View>
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[
+            styles.tabButton,
+            activeTab === 'All' && styles.activeTabButton
+          ]}
+          onPress={() => setActiveTab('All')}
+        >
+          <Text style={[
+            styles.tabButtonText,
+            activeTab === 'All' && styles.activeTabButtonText
+          ]}>
+            All
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.tabButton,
+            activeTab === 'Unread' && styles.activeTabButton
+          ]}
+          onPress={() => setActiveTab('Unread')}
+        >
+          <Text style={[
+            styles.tabButtonText,
+            activeTab === 'Unread' && styles.activeTabButtonText
+          ]}>
+            Unread
+          </Text>
+        </TouchableOpacity>
+      </View>
+      {/* Notifications List */}
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {loading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>Loading...</Text>
+          </View>
+        ) : getFilteredNotifications().length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="notifications-outline" size={64} color={COLORS.lightGrey} />
+            <Text style={styles.emptyStateText}>No notifications found</Text>
+          </View>
+        ) : (
+          getFilteredNotifications().map((category) => (
+            <View key={category.id} style={styles.categorySection}>
+              <Text style={styles.categoryTitle}>{category.category}</Text>
+              <View style={styles.notificationsContainer}>
+                {category.notifications.map((notification) =>
+                  renderNotificationItem(notification)
+                )}
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
+      <StatusBar style="dark" />
+    </SafeAreaView>
+  );
+};
 
 export default NotificationScreen;

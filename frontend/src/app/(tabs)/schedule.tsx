@@ -24,33 +24,10 @@ import PastAppointmentCard from '../../components/PastAppointmentCard';
 import FeedbackBanner from '../../components/FeedbackBanner';
 import CarouselIndicator from '../../components/CarouselIndicator';
 import { useAuth } from '../../context/authContext';
+import { useTheme } from '../../context/ThemeContext';
 import { AuthContextType } from '../../context/authContext';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-const COLORS = {
-  primary: "#1976D2",
-  primaryTeal: "#20B2AA",
-  textPrimary: "#1a4971",
-  textSecondary: "#6d93b8",
-  textDark: "#0d2b43",
-  placeholderText: "#767676",
-  background: "#f8fafc",
-  cardBackground: "#ffffff",
-  inputBackground: "#f0f8ff",
-  border: "#e2e8f0",
-  white: "#ffffff",
-  black: "#000000",
-  grey: "#64748b",
-  lightGrey: "#f1f5f9",
-  error: "#ef4444",
-  success: "#10b981",
-  warning: "#f59e0b",
-  primaryLight: "#dbeafe",
-  selectedTab: "#1976D2",
-  inactiveTab: "#94a3b8",
-  shadow: "rgba(0, 0, 0, 0.1)"
-};
 
 // Define AuthContextType locally if not exported
 interface AuthContextType {
@@ -76,6 +53,7 @@ interface Appointment {
 
 export default function AppointmentsScreen() {
   const { user } = useAuth() as AuthContextType;
+  const { COLORS } = useTheme();
   const navigation = useNavigation();
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -348,6 +326,187 @@ export default function AppointmentsScreen() {
     setSelectedPastAppointment(appointment);
     setModalVisible(true);
   };
+
+  const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginTop: 16,
+    backgroundColor: COLORS.background,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textDark,
+  },
+  moreButton: {
+    padding: 8,
+    marginRight: -8,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  
+  // Loading styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  
+  // Error styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.error,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Empty state styles
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.placeholderText,
+    textAlign: 'center',
+  },
+  
+  // Section styles
+  sectionContainer: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.textDark,
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
+  
+  // Carousel styles
+  carouselContainer: {
+    paddingLeft: 20,
+  },
+  
+  // Past appointments styles
+  pastSection: {
+    paddingHorizontal: 20,
+  },
+  pastSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pastSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textDark,
+  },
+  totalCountText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  
+  // Load more styles
+  loadMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  loadMoreText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  loadMoreButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginVertical: 16,
+    alignSelf: 'center',
+  },
+  loadMoreButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  endOfListContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  endOfListText: {
+    fontSize: 14,
+    color: COLORS.placeholderText,
+    fontStyle: 'italic',
+  },
+
+  // Floating Action Button styles
+  floatingActionButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12, // Square with rounded corners
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8, // Android shadow
+    shadowColor: COLORS.shadow, // iOS shadow
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 1000,
+  },
+});
 
   // Modal content for appointment details
   const renderAppointmentModal = () => (
@@ -622,184 +781,3 @@ export default function AppointmentsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginTop: 16,
-    backgroundColor: COLORS.background,
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.textDark,
-  },
-  moreButton: {
-    padding: 8,
-    marginRight: -8,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  
-  // Loading styles
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.textSecondary,
-  },
-  
-  // Error styles
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  errorText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.error,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  
-  // Empty state styles
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: COLORS.placeholderText,
-    textAlign: 'center',
-  },
-  
-  // Section styles
-  sectionContainer: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textDark,
-    marginBottom: 16,
-    paddingHorizontal: 20,
-  },
-  
-  // Carousel styles
-  carouselContainer: {
-    paddingLeft: 20,
-  },
-  
-  // Past appointments styles
-  pastSection: {
-    paddingHorizontal: 20,
-  },
-  pastSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  pastSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.textDark,
-  },
-  totalCountText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-  
-  // Load more styles
-  loadMoreContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  loadMoreText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  loadMoreButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginVertical: 16,
-    alignSelf: 'center',
-  },
-  loadMoreButtonText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  endOfListContainer: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  endOfListText: {
-    fontSize: 14,
-    color: COLORS.placeholderText,
-    fontStyle: 'italic',
-  },
-
-  // Floating Action Button styles
-  floatingActionButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 56,
-    height: 56,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12, // Square with rounded corners
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8, // Android shadow
-    shadowColor: COLORS.shadow, // iOS shadow
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    zIndex: 1000,
-  },
-});

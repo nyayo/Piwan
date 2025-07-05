@@ -19,10 +19,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import { useConsultant } from '../../context/consultantContext';
 import { getConsultantReviewsPaginated, submitReview } from '../../services/api';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import ToastMessage from '../../components/ToastMessage';
 
 export default function DoctorDetailsScreen() {
+    const { COLORS } = useTheme();
   const navigation = useNavigation();
   const { selectedConsultant } = useConsultant();
   
@@ -325,203 +326,7 @@ export default function DoctorDetailsScreen() {
       fetchConsultantReviews(1, false);
   }, [fetchConsultantReviews]);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.gradientStart} />
-        
-      {/* Header with Gradient Background */}
-      <View style={styles.header}>
-          <View style={styles.headerTop}>
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                  <Ionicons name="arrow-back" size={24} color={COLORS.white} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Doctor Details</Text>
-              <View style={styles.headerActions}>
-                  <TouchableOpacity style={styles.actionButton} onPress={() => setIsFavorite(!isFavorite)}>
-                      <Ionicons 
-                          name={isFavorite ? "heart" : "heart-outline"} 
-                          size={24} 
-                          color={isFavorite ? "#FF6B6B" : COLORS.white} 
-                      />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton}>
-                      <Ionicons name="share-outline" size={24} color={COLORS.white} />
-                  </TouchableOpacity>
-              </View>
-          </View>
-      </View>
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Doctor Profile Card */}
-        <View style={styles.profileCard}>
-            <View style={styles.profileImageContainer}>
-                <Image 
-                    source={{ uri: consultantData.profilePicture }}
-                    style={styles.profileImage}
-                />
-                <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={16} color="#FFD700" />
-                    <Text style={styles.ratingText}>{displayRating}</Text>
-                </View>
-            </View>
-            
-            <Text style={styles.doctorName}>{consultantData.name}</Text>
-            <Text style={styles.doctorSpecialty}>{consultantData.specialty}</Text>
-        </View>
-
-        {/* Doctor Information */}
-        <View style={styles.infoContainer}>
-            <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Experience:</Text>
-                <Text style={styles.infoValue}>{consultantData.experience}</Text>
-            </View>
-            
-            <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Languages:</Text>
-                <Text style={styles.infoValue}>{consultantData.languages.join(", ")}</Text>
-            </View>
-            
-            <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Education:</Text>
-                <Text style={styles.infoValue}>{consultantData.education}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Consultation Fee:</Text>
-                <Text style={styles.infoValue}>${consultantData.price}</Text>
-            </View>
-        </View>
-
-        {/* Reviews Section */}
-        <View style={styles.reviewsContainer}>
-            <View style={styles.reviewsHeader}>
-                <Text style={styles.sectionTitle}>
-                    Reviews ({totalReviews})
-                </Text>
-                <TouchableOpacity 
-                    style={styles.writeReviewButton}
-                    onPress={() => setShowReviewModal(true)}
-                >
-                    <Ionicons name="add" size={20} color={COLORS.white} />
-                    <Text style={styles.writeReviewText}>Write Review</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Overall Rating */}
-            {totalReviews > 0 && (
-                <View style={styles.overallRating}>
-                    <Text style={styles.ratingNumber}>{displayRating}</Text>
-                    {renderStars(Math.round(displayRating), null, 24)}
-                    <Text style={styles.ratingCount}>Based on {totalReviews} reviews</Text>
-                </View>
-            )}
-
-            {/* Sorting Options */}
-            {totalReviews > 1 && renderSortingOptions()}
-
-            {/* Reviews List */}
-            {isLoadingReviews ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Loading reviews...</Text>
-                </View>
-            ) : reviews.length > 0 ? (
-                <FlatList
-                    data={reviews}
-                    renderItem={renderReviewItem}
-                    keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
-                    onEndReached={loadMoreReviews}
-                    onEndReachedThreshold={0.3}
-                    ListFooterComponent={renderFooter}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isRefreshing}
-                            onRefresh={refreshReviews}
-                            colors={[COLORS.primary]}
-                        />
-                    }
-                    scrollEnabled={false}
-                    nestedScrollEnabled={true}
-                />
-            ) : (
-                <View style={styles.noReviewsContainer}>
-                    <Ionicons name="chatbubble-outline" size={50} color={COLORS.textSecondary} />
-                    <Text style={styles.noReviewsText}>No reviews yet</Text>
-                    <Text style={styles.noReviewsSubtext}>Be the first to share your experience</Text>
-                </View>
-            )}
-        </View>
-
-        {/* Bottom padding */}
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-
-      {/* Review Modal */}
-      <Modal
-          visible={showReviewModal}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setShowReviewModal(false)}
-      >
-          <SafeAreaView style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={() => setShowReviewModal(false)}>
-                      <Text style={styles.modalCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.modalTitle}>Write Review</Text>
-                  <TouchableOpacity 
-                      onPress={handleSubmitReview}
-                      disabled={isSubmittingReview}
-                  >
-                      <Text style={[
-                          styles.modalSubmitText,
-                          isSubmittingReview && styles.disabledText
-                      ]}>
-                          {isSubmittingReview ? 'Submitting...' : 'Submit'}
-                      </Text>
-                  </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.modalContent}>
-                  <View style={styles.doctorPreview}>
-                      <Image 
-                          source={{ uri: consultantData.profilePicture }}
-                          style={styles.doctorPreviewImage}
-                      />
-                      <View>
-                          <Text style={styles.doctorPreviewName}>{consultantData.name}</Text>
-                          <Text style={styles.doctorPreviewSpecialty}>{consultantData.specialty}</Text>
-                      </View>
-                  </View>
-
-                  <View style={styles.ratingSection}>
-                      <Text style={styles.ratingLabel}>Rating</Text>
-                      {renderStars(reviewRating, setReviewRating, 30)}
-                  </View>
-
-                  <View style={styles.reviewTextSection}>
-                      <Text style={styles.reviewTextLabel}>Review (Optional)</Text>
-                      <TextInput
-                          style={styles.reviewTextInput}
-                          multiline
-                          numberOfLines={4}
-                          placeholder="Share your experience with this doctor..."
-                          value={reviewText}
-                          onChangeText={setReviewText}
-                          maxLength={500}
-                      />
-                      <Text style={styles.characterCount}>
-                          {reviewText.length}/500 characters
-                      </Text>
-                  </View>
-              </ScrollView>
-          </SafeAreaView>
-      </Modal>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
       flex: 1,
       backgroundColor: COLORS.background,
@@ -914,3 +719,199 @@ const styles = StyleSheet.create({
       marginTop: 8,
   },
 });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.gradientStart} />
+        
+      {/* Header with Gradient Background */}
+      <View style={styles.header}>
+          <View style={styles.headerTop}>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                  <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Doctor Details</Text>
+              <View style={styles.headerActions}>
+                  <TouchableOpacity style={styles.actionButton} onPress={() => setIsFavorite(!isFavorite)}>
+                      <Ionicons 
+                          name={isFavorite ? "heart" : "heart-outline"} 
+                          size={24} 
+                          color={isFavorite ? "#FF6B6B" : COLORS.white} 
+                      />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionButton}>
+                      <Ionicons name="share-outline" size={24} color={COLORS.white} />
+                  </TouchableOpacity>
+              </View>
+          </View>
+      </View>
+
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Doctor Profile Card */}
+        <View style={styles.profileCard}>
+            <View style={styles.profileImageContainer}>
+                <Image 
+                    source={{ uri: consultantData.profilePicture }}
+                    style={styles.profileImage}
+                />
+                <View style={styles.ratingBadge}>
+                    <Ionicons name="star" size={16} color="#FFD700" />
+                    <Text style={styles.ratingText}>{displayRating}</Text>
+                </View>
+            </View>
+            
+            <Text style={styles.doctorName}>{consultantData.name}</Text>
+            <Text style={styles.doctorSpecialty}>{consultantData.specialty}</Text>
+        </View>
+
+        {/* Doctor Information */}
+        <View style={styles.infoContainer}>
+            <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Experience:</Text>
+                <Text style={styles.infoValue}>{consultantData.experience}</Text>
+            </View>
+            
+            <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Languages:</Text>
+                <Text style={styles.infoValue}>{consultantData.languages.join(", ")}</Text>
+            </View>
+            
+            <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Education:</Text>
+                <Text style={styles.infoValue}>{consultantData.education}</Text>
+            </View>
+
+            <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Consultation Fee:</Text>
+                <Text style={styles.infoValue}>${consultantData.price}</Text>
+            </View>
+        </View>
+
+        {/* Reviews Section */}
+        <View style={styles.reviewsContainer}>
+            <View style={styles.reviewsHeader}>
+                <Text style={styles.sectionTitle}>
+                    Reviews ({totalReviews})
+                </Text>
+                <TouchableOpacity 
+                    style={styles.writeReviewButton}
+                    onPress={() => setShowReviewModal(true)}
+                >
+                    <Ionicons name="add" size={20} color={COLORS.white} />
+                    <Text style={styles.writeReviewText}>Write Review</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Overall Rating */}
+            {totalReviews > 0 && (
+                <View style={styles.overallRating}>
+                    <Text style={styles.ratingNumber}>{displayRating}</Text>
+                    {renderStars(Math.round(displayRating), null, 24)}
+                    <Text style={styles.ratingCount}>Based on {totalReviews} reviews</Text>
+                </View>
+            )}
+
+            {/* Sorting Options */}
+            {totalReviews > 1 && renderSortingOptions()}
+
+            {/* Reviews List */}
+            {isLoadingReviews ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <Text style={styles.loadingText}>Loading reviews...</Text>
+                </View>
+            ) : reviews.length > 0 ? (
+                <FlatList
+                    data={reviews}
+                    renderItem={renderReviewItem}
+                    keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
+                    onEndReached={loadMoreReviews}
+                    onEndReachedThreshold={0.3}
+                    ListFooterComponent={renderFooter}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={refreshReviews}
+                            colors={[COLORS.primary]}
+                        />
+                    }
+                    scrollEnabled={false}
+                    nestedScrollEnabled={true}
+                />
+            ) : (
+                <View style={styles.noReviewsContainer}>
+                    <Ionicons name="chatbubble-outline" size={50} color={COLORS.textSecondary} />
+                    <Text style={styles.noReviewsText}>No reviews yet</Text>
+                    <Text style={styles.noReviewsSubtext}>Be the first to share your experience</Text>
+                </View>
+            )}
+        </View>
+
+        {/* Bottom padding */}
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+
+      {/* Review Modal */}
+      <Modal
+          visible={showReviewModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowReviewModal(false)}
+      >
+          <SafeAreaView style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                  <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+                      <Text style={styles.modalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.modalTitle}>Write Review</Text>
+                  <TouchableOpacity 
+                      onPress={handleSubmitReview}
+                      disabled={isSubmittingReview}
+                  >
+                      <Text style={[
+                          styles.modalSubmitText,
+                          isSubmittingReview && styles.disabledText
+                      ]}>
+                          {isSubmittingReview ? 'Submitting...' : 'Submit'}
+                      </Text>
+                  </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalContent}>
+                  <View style={styles.doctorPreview}>
+                      <Image 
+                          source={{ uri: consultantData.profilePicture }}
+                          style={styles.doctorPreviewImage}
+                      />
+                      <View>
+                          <Text style={styles.doctorPreviewName}>{consultantData.name}</Text>
+                          <Text style={styles.doctorPreviewSpecialty}>{consultantData.specialty}</Text>
+                      </View>
+                  </View>
+
+                  <View style={styles.ratingSection}>
+                      <Text style={styles.ratingLabel}>Rating</Text>
+                      {renderStars(reviewRating, setReviewRating, 30)}
+                  </View>
+
+                  <View style={styles.reviewTextSection}>
+                      <Text style={styles.reviewTextLabel}>Review (Optional)</Text>
+                      <TextInput
+                          style={styles.reviewTextInput}
+                          multiline
+                          numberOfLines={4}
+                          placeholder="Share your experience with this doctor..."
+                          value={reviewText}
+                          onChangeText={setReviewText}
+                          maxLength={500}
+                      />
+                      <Text style={styles.characterCount}>
+                          {reviewText.length}/500 characters
+                      </Text>
+                  </View>
+              </ScrollView>
+          </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
+  );
+}

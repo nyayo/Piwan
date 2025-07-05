@@ -17,13 +17,14 @@ import {
   FontAwesome5,
 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import COLORS from '../../../constants/theme';
+import { useTheme } from '../../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const PropertyRentalScreen = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const { COLORS } = useTheme();
 
   const images = [
     'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop',
@@ -39,210 +40,7 @@ const PropertyRentalScreen = () => {
     { id: 4, title: 'Internet', checked: true },
   ];
 
-  const renderImageItem = ({ item, index }) => (
-    <Image source={{ uri: item }} style={styles.carouselImage} />
-  );
-
-  const onImageScroll = (event) => {
-    const slideSize = event.nativeEvent.layoutMeasurement.width;
-    const index = event.nativeEvent.contentOffset.x / slideSize;
-    const roundIndex = Math.round(index);
-    setCurrentImageIndex(roundIndex);
-  };
-
-  const renderPropertyDetail = ({ item }) => (
-    <View style={styles.propertyDetailItem}>
-      <View style={styles.checkmarkContainer}>
-        <View style={styles.checkmarkOuter}>
-          <View style={styles.checkmarkInner} />
-        </View>
-      </View>
-      <Text style={styles.propertyDetailText}>{item.title}</Text>
-    </View>
-  );
-
-  return (
-    <SafeAreaView edges={['bottom']} style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Image Carousel Section */}
-        <View style={styles.imageContainer}>
-          <FlatList
-            data={images}
-            renderItem={renderImageItem}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={onImageScroll}
-            scrollEventThrottle={16}
-          />
-          
-          {/* Back Button */}
-          <TouchableOpacity style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#666" />
-          </TouchableOpacity>
-
-          {/* Favorite Button */}
-          <TouchableOpacity
-            style={styles.favoriteButton}
-            onPress={() => setIsFavorite(!isFavorite)}
-          >
-            <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
-              size={24}
-              color={isFavorite ? "#FF6B6B" : "#666"}
-            />
-          </TouchableOpacity>
-
-          {/* Property Title Overlay */}
-          <View style={styles.titleOverlay}>
-            
-            <Text style={styles.propertyTitle}>Bosphorus View</Text>
-            <View style={styles.locationRow}>
-              <View style={styles.locationItem}>
-                <Ionicons name="location-outline" size={16} color="#fff" />
-                <Text style={styles.locationText}>Istanbul</Text>
-              </View>
-              <Text style={styles.areaText}>400m²</Text>
-            </View>
-          </View>
-
-          {/* Image Indicators */}
-          <View style={styles.indicatorContainer}>
-            {images.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.indicator,
-                  index === currentImageIndex && styles.activeIndicator
-                ]}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* Content Section */}
-        <View style={styles.contentContainer}>
-          {/* Price Section */}
-          <View style={styles.priceSection}>
-            <Text style={styles.priceLabel}>Price</Text>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceAmount}>₺ 24,000.00</Text>
-              <Text style={styles.priceFrequency}>monthly</Text>
-            </View>
-          </View>
-
-          {/* <View style={{ backgroundColor: 'red', height: 2, width: '100%'}} /> */}
-
-          {/* Property Features */}
-          <View style={styles.featuresContainer}>
-            <View style={styles.featureItem}>
-              <Ionicons name="bed-outline" size={24} color="#FF8C00" />
-              <Text style={styles.featureText}>2 Bedrooms</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <MaterialIcons name="bathtub" size={24} color="#FF8C00" />
-              <Text style={styles.featureText}>3 Bathrooms</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <MaterialIcons name="kitchen" size={24} color="#FF8C00" />
-              <Text style={styles.featureText}>2 Kitchens</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Ionicons name="car-outline" size={24} color="#FF8C00" />
-              <Text style={styles.featureText}>1 Parking</Text>
-            </View>
-          </View>
-          {/* Description Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.descriptionText}>
-              Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-            </Text>
-            <Text style={styles.descriptionText}>
-              Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
-            </Text>
-          </View>
-
-          {/* Property Details Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Property Details</Text>
-            <FlatList
-              data={propertyDetails}
-              renderItem={renderPropertyDetail}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-            />
-          </View>
-
-
-          {/* Location Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Location</Text>
-            <View style={styles.mapContainer}>
-              <Image
-                source={{
-                  uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&h=200&fit=crop'
-                }}
-                style={styles.mapImage}
-              />
-              <View style={styles.mapOverlay}>
-                <View style={styles.mapPin}>
-                  <Ionicons name="location" size={16} color="#fff" />
-                </View>
-              </View>
-              {/* Location Labels */}
-              <View style={styles.locationLabels}>
-                <Text style={styles.locationLabel}>Maslak</Text>
-                <Text style={styles.locationLabel}>Örneköy</Text>
-                <Text style={styles.locationLabel}>Zerzave</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Contact Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Contact</Text>
-            <View style={styles.contactContainer}>
-              <Text style={styles.contactName}>John Publ</Text>
-              <View style={styles.contactButtons}>
-                <TouchableOpacity style={styles.contactButton}>
-                  <Feather name="phone" size={20} color="#FF8C00" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.contactButton}>
-                  <Feather name="mail" size={20} color="#FF8C00" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="home" size={24} color="#FF8C00" />
-          <Text style={styles.navTextActive}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="search-outline" size={24} color="#999" />
-          <Text style={styles.navText}>Search</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="person-outline" size={24} color="#999" />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="menu-outline" size={24} color="#999" />
-          <Text style={styles.navText}>Menu</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-};
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -531,5 +329,208 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
+  const renderImageItem = ({ item, index }) => (
+    <Image source={{ uri: item }} style={styles.carouselImage} />
+  );
+
+  const onImageScroll = (event) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = event.nativeEvent.contentOffset.x / slideSize;
+    const roundIndex = Math.round(index);
+    setCurrentImageIndex(roundIndex);
+  };
+
+  const renderPropertyDetail = ({ item }) => (
+    <View style={styles.propertyDetailItem}>
+      <View style={styles.checkmarkContainer}>
+        <View style={styles.checkmarkOuter}>
+          <View style={styles.checkmarkInner} />
+        </View>
+      </View>
+      <Text style={styles.propertyDetailText}>{item.title}</Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView edges={['bottom']} style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Image Carousel Section */}
+        <View style={styles.imageContainer}>
+          <FlatList
+            data={images}
+            renderItem={renderImageItem}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={onImageScroll}
+            scrollEventThrottle={16}
+          />
+          
+          {/* Back Button */}
+          <TouchableOpacity style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color="#666" />
+          </TouchableOpacity>
+
+          {/* Favorite Button */}
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={() => setIsFavorite(!isFavorite)}
+          >
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={24}
+              color={isFavorite ? "#FF6B6B" : "#666"}
+            />
+          </TouchableOpacity>
+
+          {/* Property Title Overlay */}
+          <View style={styles.titleOverlay}>
+            
+            <Text style={styles.propertyTitle}>Bosphorus View</Text>
+            <View style={styles.locationRow}>
+              <View style={styles.locationItem}>
+                <Ionicons name="location-outline" size={16} color="#fff" />
+                <Text style={styles.locationText}>Istanbul</Text>
+              </View>
+              <Text style={styles.areaText}>400m²</Text>
+            </View>
+          </View>
+
+          {/* Image Indicators */}
+          <View style={styles.indicatorContainer}>
+            {images.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.indicator,
+                  index === currentImageIndex && styles.activeIndicator
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Content Section */}
+        <View style={styles.contentContainer}>
+          {/* Price Section */}
+          <View style={styles.priceSection}>
+            <Text style={styles.priceLabel}>Price</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceAmount}>₺ 24,000.00</Text>
+              <Text style={styles.priceFrequency}>monthly</Text>
+            </View>
+          </View>
+
+          {/* <View style={{ backgroundColor: 'red', height: 2, width: '100%'}} /> */}
+
+          {/* Property Features */}
+          <View style={styles.featuresContainer}>
+            <View style={styles.featureItem}>
+              <Ionicons name="bed-outline" size={24} color="#FF8C00" />
+              <Text style={styles.featureText}>2 Bedrooms</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <MaterialIcons name="bathtub" size={24} color="#FF8C00" />
+              <Text style={styles.featureText}>3 Bathrooms</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <MaterialIcons name="kitchen" size={24} color="#FF8C00" />
+              <Text style={styles.featureText}>2 Kitchens</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="car-outline" size={24} color="#FF8C00" />
+              <Text style={styles.featureText}>1 Parking</Text>
+            </View>
+          </View>
+          {/* Description Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.descriptionText}>
+              Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+            </Text>
+            <Text style={styles.descriptionText}>
+              Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+            </Text>
+          </View>
+
+          {/* Property Details Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Property Details</Text>
+            <FlatList
+              data={propertyDetails}
+              renderItem={renderPropertyDetail}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+            />
+          </View>
+
+
+          {/* Location Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Location</Text>
+            <View style={styles.mapContainer}>
+              <Image
+                source={{
+                  uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&h=200&fit=crop'
+                }}
+                style={styles.mapImage}
+              />
+              <View style={styles.mapOverlay}>
+                <View style={styles.mapPin}>
+                  <Ionicons name="location" size={16} color="#fff" />
+                </View>
+              </View>
+              {/* Location Labels */}
+              <View style={styles.locationLabels}>
+                <Text style={styles.locationLabel}>Maslak</Text>
+                <Text style={styles.locationLabel}>Örneköy</Text>
+                <Text style={styles.locationLabel}>Zerzave</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Contact Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Contact</Text>
+            <View style={styles.contactContainer}>
+              <Text style={styles.contactName}>John Publ</Text>
+              <View style={styles.contactButtons}>
+                <TouchableOpacity style={styles.contactButton}>
+                  <Feather name="phone" size={20} color="#FF8C00" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.contactButton}>
+                  <Feather name="mail" size={20} color="#FF8C00" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="home" size={24} color="#FF8C00" />
+          <Text style={styles.navTextActive}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="search-outline" size={24} color="#999" />
+          <Text style={styles.navText}>Search</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="person-outline" size={24} color="#999" />
+          <Text style={styles.navText}>Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="menu-outline" size={24} color="#999" />
+          <Text style={styles.navText}>Menu</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
 
 export default PropertyRentalScreen

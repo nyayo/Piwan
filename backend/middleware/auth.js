@@ -20,6 +20,7 @@ export const authenticate = async (req, res, next) => {
         const trimmedToken = token.trim();
         const decoded = jwt.verify(trimmedToken, process.env.JWT_SECRET);
         req.user = decoded; // Contains user info
+        console.log('user info: ', req.user)
         next();
     } catch (error) {
         if (error.name === 'TokenExpiredError') {

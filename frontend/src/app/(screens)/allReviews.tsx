@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/authContext';
 import { getConsultantReviewsPaginated } from '../../services/api';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,7 @@ interface Review {
 
 const AllReviewsScreen = () => {
   const { user } = useAuth();
+  const { COLORS } = useTheme();
   const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,72 +100,7 @@ const AllReviewsScreen = () => {
     </View>
   );
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
-        </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle}>All Reviews & Ratings</Text>
-          <Text style={styles.headerSubtitle}>See what patients are saying</Text>
-        </View>
-      </View>
-      {/* Overall Rating Overview (dashboard style) */}
-      <View style={styles.ratingOverview}>
-        <View style={styles.ratingLeft}>
-          <Text style={styles.averageRating}>{averageRating.toFixed(1)}</Text>
-          <View style={styles.starsContainer}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons 
-                key={star} 
-                name="star" 
-                size={20} 
-                color={star <= Math.floor(averageRating) ? "#FFD700" : "#E0E0E0"} 
-              />
-            ))}
-          </View>
-          <Text style={styles.totalReviews}>{totalReviews} reviews</Text>
-        </View>
-        <View style={styles.ratingRight}>
-          {ratingDistribution.map((rating, index) => (
-            <View key={index} style={styles.ratingRow}>
-              <Text style={styles.starLabel}>{rating.stars}★</Text>
-              <View style={styles.ratingBarContainer}>
-                <View 
-                  style={[
-                    styles.ratingBarFill, 
-                    { width: `${(totalReviews ? (rating.count / totalReviews) * 100 : 0)}%` }
-                  ]} 
-                />
-              </View>
-              <Text style={styles.ratingCount}>{rating.count}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-      {/* List */}
-      {loading && page === 1 ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={reviews}
-          renderItem={renderReview}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={{ paddingBottom: 30, paddingHorizontal: 16 }}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.2}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          ListEmptyComponent={<Text style={{ color: '#888', textAlign: 'center', marginTop: 40 }}>No reviews yet.</Text>}
-        />
-      )}
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
@@ -312,5 +248,70 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>All Reviews & Ratings</Text>
+          <Text style={styles.headerSubtitle}>See what patients are saying</Text>
+        </View>
+      </View>
+      {/* Overall Rating Overview (dashboard style) */}
+      <View style={styles.ratingOverview}>
+        <View style={styles.ratingLeft}>
+          <Text style={styles.averageRating}>{averageRating.toFixed(1)}</Text>
+          <View style={styles.starsContainer}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Ionicons 
+                key={star} 
+                name="star" 
+                size={20} 
+                color={star <= Math.floor(averageRating) ? "#FFD700" : "#E0E0E0"} 
+              />
+            ))}
+          </View>
+          <Text style={styles.totalReviews}>{totalReviews} reviews</Text>
+        </View>
+        <View style={styles.ratingRight}>
+          {ratingDistribution.map((rating, index) => (
+            <View key={index} style={styles.ratingRow}>
+              <Text style={styles.starLabel}>{rating.stars}★</Text>
+              <View style={styles.ratingBarContainer}>
+                <View 
+                  style={[
+                    styles.ratingBarFill, 
+                    { width: `${(totalReviews ? (rating.count / totalReviews) * 100 : 0)}%` }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.ratingCount}>{rating.count}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* List */}
+      {loading && page === 1 ? (
+        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={reviews}
+          renderItem={renderReview}
+          keyExtractor={item => item.id.toString()}
+          contentContainerStyle={{ paddingBottom: 30, paddingHorizontal: 16 }}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.2}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={<Text style={{ color: '#888', textAlign: 'center', marginTop: 40 }}>No reviews yet.</Text>}
+        />
+      )}
+    </View>
+  );
+};
 
 export default AllReviewsScreen;

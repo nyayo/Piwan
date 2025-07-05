@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native'
 import React from 'react'
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext'
 
 type CarouselIndicatorProps = {
     total: number;
@@ -8,22 +8,9 @@ type CarouselIndicatorProps = {
 }
 
 const CarouselIndicator = ({ total, current }: CarouselIndicatorProps) => {
-    return (
-        <View style={styles.indicatorContainer}>
-            {Array.from({ length: total }).map((_, index) => (
-            <View
-                key={index}
-                style={[
-                styles.indicator,
-                index === current ? styles.activeIndicator : styles.inactiveIndicator
-                ]}
-            />
-            ))}
-        </View>
-    );
-}
-
-const styles = StyleSheet.create({
+    const { COLORS } = useTheme();
+    
+    const styles = StyleSheet.create({
     indicatorContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
@@ -44,5 +31,21 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.lightGrey,
     },
 })
+    return (
+        <View style={styles.indicatorContainer}>
+            {Array.from({ length: total }).map((_, index) => (
+            <View
+                key={index}
+                style={[
+                styles.indicator,
+                index === current ? styles.activeIndicator : styles.inactiveIndicator
+                ]}
+            />
+            ))}
+        </View>
+    );
+}
+
+
 
 export default CarouselIndicator

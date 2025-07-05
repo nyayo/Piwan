@@ -1,22 +1,13 @@
 import { View, Text, StyleSheet, Dimensions } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react'
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 const { width: screenWidth } = Dimensions.get('window');
 
 const EmptyEventsCarousel = () => {
-    return (
-        <View style={styles.emptyCarousel}>
-            <View style={styles.emptyEventCard}>
-                <Ionicons name="calendar-outline" size={48} color={COLORS.grey} />
-                <Text style={styles.emptyTitle}>No Events Yet</Text>
-                <Text style={styles.emptyDescription}>Tap the + button to add your first wellness event</Text>
-            </View>
-        </View>
-    );
-}
+    const { COLORS } = useTheme();
 
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     emptyCarousel: {
         height: 180,
         justifyContent: 'center',
@@ -47,5 +38,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
 })
+    return (
+        <View style={styles.emptyCarousel}>
+            <View style={styles.emptyEventCard}>
+                <Ionicons name="calendar-outline" size={48} color={COLORS.grey} />
+                <Text style={styles.emptyTitle}>No Events Yet</Text>
+                <Text style={styles.emptyDescription}>Tap the + button to add your first wellness event</Text>
+            </View>
+        </View>
+    );
+}
 
 export default EmptyEventsCarousel;

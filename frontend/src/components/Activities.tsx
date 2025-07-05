@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } from 'react-native'
 import React from 'react'
 import { ActivityType } from '../data/activity-data';
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 // Helper to normalize image source for local and remote images
 const getImageSource = (image: any) => {
@@ -19,25 +19,9 @@ type Activities = {
 }
 
 const Activities = ({index, activity}:Activities) => {
-    return (
-        <TouchableOpacity
-            key={index}
-            style={styles.activityItem}
-            onPress={() => {
-            console.log(`Tapped ${activity.type}`);
-            }}
-        >
-            <Image
-            style={styles.activityImage}
-            source={getImageSource(activity.image)}
-            defaultSource={require('../assets/icons/default.png')}
-            />
-            <Text style={styles.activityText}>{activity.timestamp}</Text>
-        </TouchableOpacity>
-    )
-}
+    const { COLORS } = useTheme();
 
-const styles = StyleSheet.create({   
+    const styles = StyleSheet.create({   
     activityItem: {
         alignItems: 'center',
         marginRight: 16,
@@ -57,5 +41,22 @@ const styles = StyleSheet.create({
         maxWidth: 100,
     },
 })
+    return (
+        <TouchableOpacity
+            key={index}
+            style={styles.activityItem}
+            onPress={() => {
+            console.log(`Tapped ${activity.type}`);
+            }}
+        >
+            <Image
+            style={styles.activityImage}
+            source={getImageSource(activity.image)}
+            defaultSource={require('../assets/icons/default.png')}
+            />
+            <Text style={styles.activityText}>{activity.timestamp}</Text>
+        </TouchableOpacity>
+    )
+}
 
 export default Activities

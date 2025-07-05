@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 const upcomingAppointments = [
   {
@@ -84,7 +84,23 @@ const pastAppointments = [
   }
 ];
 
-const TabButton = ({ title, isActive, onPress, count }) => (
+export default function AppointmentsScreen() {
+  const navigation = useNavigation();
+  const { COLORS } = useTheme();
+  const [activeTab, setActiveTab] = useState('upcoming');
+
+  const handlePayPress = (appointment) => {
+    Alert.alert(
+      "Payment",
+      `Proceed to pay ${appointment.price}$ for appointment with ${appointment.doctorName}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Pay Now", onPress: () => console.log("Payment processed") }
+      ]
+    );
+  };
+
+  const TabButton = ({ title, isActive, onPress, count }) => (
   <TouchableOpacity
     style={[styles.tabButton, isActive && styles.activeTabButton]}
     onPress={onPress}
@@ -162,21 +178,6 @@ const FeedbackBanner = () => (
   </View>
 );
 
-export default function AppointmentsScreen() {
-  const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState('upcoming');
-
-  const handlePayPress = (appointment) => {
-    Alert.alert(
-      "Payment",
-      `Proceed to pay ${appointment.price}$ for appointment with ${appointment.doctorName}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Pay Now", onPress: () => console.log("Payment processed") }
-      ]
-    );
-  };
-
   const renderTabContent = () => {
     if (activeTab === 'upcoming') {
       return (
@@ -213,55 +214,7 @@ export default function AppointmentsScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="chevron-back" size={24} color={COLORS.textDark} />
-        </TouchableOpacity>
-        
-        <Text style={styles.headerTitle}>Appointment</Text>
-        
-        <TouchableOpacity style={styles.moreButton}>
-          <Ionicons name="ellipsis-horizontal" size={24} color={COLORS.textDark} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabContainer}>
-        <TabButton
-          title="Upcoming"
-          isActive={activeTab === 'upcoming'}
-          onPress={() => setActiveTab('upcoming')}
-          count={upcomingAppointments.length}
-        />
-        <TabButton
-          title="Past"
-          isActive={activeTab === 'past'}
-          onPress={() => setActiveTab('past')}
-          count={0}
-        />
-      </View>
-
-      {/* Content */}
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {renderTabContent()}
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -523,3 +476,51 @@ const styles = StyleSheet.create({
     padding: 8,
   },
 });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={24} color={COLORS.textDark} />
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Appointment</Text>
+        
+        <TouchableOpacity style={styles.moreButton}>
+          <Ionicons name="ellipsis-horizontal" size={24} color={COLORS.textDark} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TabButton
+          title="Upcoming"
+          isActive={activeTab === 'upcoming'}
+          onPress={() => setActiveTab('upcoming')}
+          count={upcomingAppointments.length}
+        />
+        <TabButton
+          title="Past"
+          isActive={activeTab === 'past'}
+          onPress={() => setActiveTab('past')}
+          count={0}
+        />
+      </View>
+
+      {/* Content */}
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {renderTabContent()}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

@@ -8,6 +8,7 @@
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "projectId": "358c70f6-d627-4592-a474-f35af77d65e6",
     "splash": {
       "image": "./src/assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,7 +22,13 @@
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "package": "com.nyayo.frontend",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
@@ -29,7 +36,15 @@
     "plugins": [
       "expo-router",
       "expo-audio",
-      "expo-video"
-    ]
+      "expo-video",
+      "expo-notifications"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "358c70f6-d627-4592-a474-f35af77d65e6"
+      }
+    },
+    "owner": "nyayo"
   }
 }

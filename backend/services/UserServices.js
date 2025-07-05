@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { sendPushNotificationAsync } from './NotificationService.js';
 
 export const getProfile = async(req) => {
     try {
@@ -248,3 +249,74 @@ export const updateProfile = async(currentEmail, fieldsToUpdate, req) => {
         }
     }
 }
+
+export const saveUserPushToken = async (userId, pushToken) => {
+    const query = 'UPDATE users SET push_token = ? WHERE id = ?';
+    await pool.query(query, [pushToken, userId]);
+};
+
+export const sendPushNotificationToUser = async (userId, title, body, data) => {
+    const [rows] = await pool.query('SELECT push_token, push_notifications_enabled FROM users WHERE id = ?', [userId]);
+    if (!rows.length || !rows[0].push_token || rows[0].push_notifications_enabled === false) {
+        return { success: false, message: 'Push notifications disabled or token not found.' };
+    }
+    const result = await sendPushNotificationAsync(rows[0].push_token, title, body, data);
+    await saveNotification({ userId, title, body, data });
+    return result;
+};
+
+export const saveConsultantPushToken = async (consultantId, pushToken) => {
+    const query = 'UPDATE consultants SET push_token = ? WHERE id = ?';
+    await pool.query(query, [pushToken, consultantId]);
+};
+
+export const sendPushNotificationToConsultant = async (consultantId, title, body, data) => {
+    const [rows] = await pool.query('SELECT push_token, push_notifications_enabled FROM consultants WHERE id = ?', [consultantId]);
+    if (!rows.length || !rows[0].push_token || rows[0].push_notifications_enabled === false) {
+        return { success: false, message: 'Push notifications disabled or token not found.' };
+    }
+    const result = await sendPushNotificationAsync(rows[0].push_token, title, body, data);
+    await saveNotification({ consultantId, title, body, data });
+    return result;
+};
+
+// --- Notification Persistence ---
+export const saveNotification = async ({ userId, consultantId, title, body, data }) => {
+    const query = `
+        INSERT INTO notifications (user_id, consultant_id, title, body, data)
+        VALUES (?, ?, ?, ?, ?)
+    `;
+    await pool.query(query, [userId || null, consultantId || null, title, body, JSON.stringify(data || {})]);
+};
+
+export const getNotificationsForUser = async (userId) => {
+    const [rows] = await pool.query(
+        'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC',
+        [userId]
+    );
+    return rows;
+};
+
+export const getNotificationsForConsultant = async (consultantId) => {
+    const [rows] = await pool.query(
+        'SELECT * FROM notifications WHERE consultant_id = ? ORDER BY created_at DESC',
+        [consultantId]
+    );
+    return rows;
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+    await pool.query('UPDATE notifications SET is_read = 1 WHERE id = ?', [notificationId]);
+};
+
+export const updateUserNotificationPreference = async (userId, enabled) => {
+    const query = 'UPDATE users SET push_notifications_enabled = ? WHERE id = ?';
+    await pool.query(query, [enabled, userId]);
+    return { success: true, message: 'Notification preference updated.' };
+};
+
+export const updateConsultantNotificationPreference = async (consultantId, enabled) => {
+    const query = 'UPDATE consultants SET push_notifications_enabled = ? WHERE id = ?';
+    await pool.query(query, [enabled, consultantId]);
+    return { success: true, message: 'Notification preference updated.' };
+};

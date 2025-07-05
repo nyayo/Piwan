@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import React from 'react'
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 export type TimeSlot = {
     time: string;
@@ -19,6 +19,7 @@ type TimeSlotProp = {
 
 const RenderTimeSlot = ({timeSlot, index, selectedTime, handleTimeSelect}: TimeSlotProp) => {
     const isSelected = timeSlot.time === selectedTime;
+    const { COLORS } = useTheme();
 
     const styles = StyleSheet.create({  
         timeSlot: {

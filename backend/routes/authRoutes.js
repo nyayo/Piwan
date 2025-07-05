@@ -1,5 +1,5 @@
 import express from 'express';
-import {register, login, consultant, logout, changePassword} from '../controllors/AuthController.js';
+import {register, login, consultant, logout, changePassword, savePushToken, sendPushNotification} from '../controllors/AuthController.js';
 import { refreshToken } from '../middleware/auth.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -11,5 +11,7 @@ router.post('/login-user', login)
 router.post('/refresh-token', refreshToken);
 router.post('/logout', logout);
 router.post('/change-password', authenticate, changePassword);
+router.post('/push-token', savePushToken);
+router.post('/send-notification', sendPushNotification);
 
 export default router;

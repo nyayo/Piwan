@@ -13,12 +13,13 @@ import {
   Animated,
 } from 'react-native';
 import { FontAwesome6, Ionicons } from '@expo/vector-icons';
-import COLORS from '../../../constants/theme';
+import { useTheme } from '../../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const PublRealtyHomeScreen = () => {
   const [activeTab, setActiveTab] = useState('Home');
+  const { COLORS } = useTheme();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const HEADER_MAX_HEIGHT = 200;
@@ -127,247 +128,7 @@ const PublRealtyHomeScreen = () => {
     extrapolate: 'clamp',
   });
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
-      {/* Animated Header */}
-      <Animated.View style={[styles.header, { height: headerHeight }]}>
-        <Animated.Image
-          source={{ uri: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=400&fit=crop' }}
-          style={[
-            styles.headerImage,
-            {
-              opacity: imageOpacity,
-              transform: [{ translateY: imageTranslateY }]
-            }
-          ]}
-          resizeMode="cover"
-        />
-        <Animated.View style={[styles.headerOverlay, { opacity: overlayOpacity }]} />
-        
-        {/* Animated Logo - fades out completely */}
-        <Animated.View style={[
-          styles.logoContainer,
-          {
-            opacity: logoOpacity,
-            transform: [{ translateY: logoTranslateY }]
-          }
-        ]}>
-          <View style={styles.logoText}>
-            <Text style={styles.logoOrange}>publ</Text>
-            <Text style={styles.logoWhite}>Realty</Text>
-          </View>
-          <Text style={styles.logoSubtext}>real estate 2024</Text>
-        </Animated.View>
-      </Animated.View>
-
-      {/* Search Bar - Fixed at top */}
-      <Animated.View style={[styles.searchContainerTop,  {
-            opacity: 1,
-            transform: [{ translateY: searchBarTranslateY }]
-          } ]}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
-          <TextInput
-            placeholder="Search Property"
-            placeholderTextColor="#9CA3AF"
-            style={styles.searchInput}
-          />
-        </View>
-      </Animated.View>
-
-      <Animated.ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: 0 }}
-      >
-        <Animated.View style={{ marginTop: contentMarginTop }}>
-          {/* Highlight Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Highlight</Text>
-            
-            <TouchableOpacity style={styles.featuredCard}>
-              <Image
-                source={{ uri: featuredProperty.image }}
-                style={styles.featuredImage}
-                resizeMode="cover"
-              />
-              <View style={styles.featuredOverlay} />
-              
-              {/* FOR SALE Badge */}
-              <View style={styles.badgeContainer}>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{featuredProperty.type}</Text>
-                </View>
-              </View>
-
-              {/* Property Info */}
-              <View style={styles.featuredInfo}>
-                <Text style={styles.featuredTitle}>{featuredProperty.title}</Text>
-                <View style={styles.featuredDetails}>
-                  <View style={styles.featuredDetailsLeft}>
-                    <View style={styles.detailItem}>
-                      <Ionicons name="location" size={14} color="white" />
-                      <Text style={styles.detailText}>{featuredProperty.location}</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <Ionicons name="resize" size={14} color="white" />
-                      <Text style={styles.detailText}>{featuredProperty.size}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.featuredPrice}>{featuredProperty.price}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Top Searches - Moved after Highlight */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Top Searches</Text>
-            
-            <View style={styles.cityContainer}>
-              {topSearches.map((city) => (
-                <TouchableOpacity key={city.id} style={styles.cityCard}>
-                  <Image
-                    source={{ uri: city.image }}
-                    style={styles.cityImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.cityOverlay} />
-                  <View style={styles.cityTextContainer}>
-                    <Text style={styles.cityText}>{city.city}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Today New Section - Now last */}
-          <View style={[styles.section, { paddingBottom: 100 }]}>
-            <Text style={styles.sectionTitle}>Today New</Text>
-            
-            {newProperties.map((property) => (
-              <View key={property.id} style={styles.propertyCard}>
-                <View style={styles.propertyImageContainer}>
-                  <Image
-                    source={{ uri: property.image }}
-                    style={styles.propertyImage}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity style={styles.heartButton}>
-                    <Ionicons name="heart-outline" size={20} color="white" />
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.propertyInfo}>
-                  <Text style={styles.propertyPrice}>{property.price}</Text>
-                  <View style={styles.propertyDetailItem}>
-                    <View style={styles.propertyDetail}>
-                      <Ionicons name="location" size={14} color="#6B7280" />
-                      <Text style={styles.propertyDetailText}>{property.location}</Text>
-                    </View>
-                    <View style={styles.propertyDetail}>
-                      <Ionicons name="resize" size={14} color="#6B7280" />
-                      <Text style={styles.propertyDetailText}>{property.size}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.amenitiesContainer}>
-                    <View style={styles.amenityBadge}>
-                      <Ionicons name="bed" size={22} color="#EA580C" />
-                      <Text style={styles.amenityText}>
-                        {property.beds} Beds
-                      </Text>
-                    </View>
-                    <View style={styles.amenityBadge}>
-                      <FontAwesome6 name="bath" size={18} color="#EA580C" />
-                      <Text style={styles.amenityText}>
-                        {property.baths} Baths
-                      </Text>
-                    </View>
-                    <View style={styles.amenityBadge}>
-                      <Ionicons name="car-sharp" size={22} color="#EA580C" />
-                      <Text style={styles.amenityText}>
-                        {property.parking} Parking
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-        </Animated.View>
-      </Animated.ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => setActiveTab('Home')}
-        >
-          <Ionicons 
-            name={activeTab === 'Home' ? 'home' : 'home-outline'} 
-            size={24} 
-            color={activeTab === 'Home' ? '#FB923C' : '#9CA3AF'} 
-          />
-          <Text style={[styles.navText, { color: activeTab === 'Home' ? '#FB923C' : '#9CA3AF' }]}>
-            Home
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => setActiveTab('Search')}
-        >
-          <Ionicons 
-            name={activeTab === 'Search' ? 'search' : 'search-outline'} 
-            size={24} 
-            color={activeTab === 'Search' ? '#FB923C' : '#9CA3AF'} 
-          />
-          <Text style={[styles.navText, { color: activeTab === 'Search' ? '#FB923C' : '#9CA3AF' }]}>
-            Search
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => setActiveTab('Profile')}
-        >
-          <Ionicons 
-            name={activeTab === 'Profile' ? 'person' : 'person-outline'} 
-            size={24} 
-            color={activeTab === 'Profile' ? '#FB923C' : '#9CA3AF'} 
-          />
-          <Text style={[styles.navText, { color: activeTab === 'Profile' ? '#FB923C' : '#9CA3AF' }]}>
-            Profile
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => setActiveTab('Menu')}
-        >
-          <Ionicons 
-            name={activeTab === 'Menu' ? 'menu' : 'menu-outline'} 
-            size={24} 
-            color={activeTab === 'Menu' ? '#FB923C' : '#9CA3AF'} 
-          />
-          <Text style={[styles.navText, { color: activeTab === 'Menu' ? '#FB923C' : '#9CA3AF' }]}>
-            Menu
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-};
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
@@ -662,5 +423,245 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Animated Header */}
+      <Animated.View style={[styles.header, { height: headerHeight }]}>
+        <Animated.Image
+          source={{ uri: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=400&fit=crop' }}
+          style={[
+            styles.headerImage,
+            {
+              opacity: imageOpacity,
+              transform: [{ translateY: imageTranslateY }]
+            }
+          ]}
+          resizeMode="cover"
+        />
+        <Animated.View style={[styles.headerOverlay, { opacity: overlayOpacity }]} />
+        
+        {/* Animated Logo - fades out completely */}
+        <Animated.View style={[
+          styles.logoContainer,
+          {
+            opacity: logoOpacity,
+            transform: [{ translateY: logoTranslateY }]
+          }
+        ]}>
+          <View style={styles.logoText}>
+            <Text style={styles.logoOrange}>publ</Text>
+            <Text style={styles.logoWhite}>Realty</Text>
+          </View>
+          <Text style={styles.logoSubtext}>real estate 2024</Text>
+        </Animated.View>
+      </Animated.View>
+
+      {/* Search Bar - Fixed at top */}
+      <Animated.View style={[styles.searchContainerTop,  {
+            opacity: 1,
+            transform: [{ translateY: searchBarTranslateY }]
+          } ]}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+          <TextInput
+            placeholder="Search Property"
+            placeholderTextColor="#9CA3AF"
+            style={styles.searchInput}
+          />
+        </View>
+      </Animated.View>
+
+      <Animated.ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: 0 }}
+      >
+        <Animated.View style={{ marginTop: contentMarginTop }}>
+          {/* Highlight Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Highlight</Text>
+            
+            <TouchableOpacity style={styles.featuredCard}>
+              <Image
+                source={{ uri: featuredProperty.image }}
+                style={styles.featuredImage}
+                resizeMode="cover"
+              />
+              <View style={styles.featuredOverlay} />
+              
+              {/* FOR SALE Badge */}
+              <View style={styles.badgeContainer}>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{featuredProperty.type}</Text>
+                </View>
+              </View>
+
+              {/* Property Info */}
+              <View style={styles.featuredInfo}>
+                <Text style={styles.featuredTitle}>{featuredProperty.title}</Text>
+                <View style={styles.featuredDetails}>
+                  <View style={styles.featuredDetailsLeft}>
+                    <View style={styles.detailItem}>
+                      <Ionicons name="location" size={14} color="white" />
+                      <Text style={styles.detailText}>{featuredProperty.location}</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Ionicons name="resize" size={14} color="white" />
+                      <Text style={styles.detailText}>{featuredProperty.size}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.featuredPrice}>{featuredProperty.price}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Top Searches - Moved after Highlight */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Top Searches</Text>
+            
+            <View style={styles.cityContainer}>
+              {topSearches.map((city) => (
+                <TouchableOpacity key={city.id} style={styles.cityCard}>
+                  <Image
+                    source={{ uri: city.image }}
+                    style={styles.cityImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.cityOverlay} />
+                  <View style={styles.cityTextContainer}>
+                    <Text style={styles.cityText}>{city.city}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Today New Section - Now last */}
+          <View style={[styles.section, { paddingBottom: 100 }]}>
+            <Text style={styles.sectionTitle}>Today New</Text>
+            
+            {newProperties.map((property) => (
+              <View key={property.id} style={styles.propertyCard}>
+                <View style={styles.propertyImageContainer}>
+                  <Image
+                    source={{ uri: property.image }}
+                    style={styles.propertyImage}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity style={styles.heartButton}>
+                    <Ionicons name="heart-outline" size={20} color="white" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.propertyInfo}>
+                  <Text style={styles.propertyPrice}>{property.price}</Text>
+                  <View style={styles.propertyDetailItem}>
+                    <View style={styles.propertyDetail}>
+                      <Ionicons name="location" size={14} color="#6B7280" />
+                      <Text style={styles.propertyDetailText}>{property.location}</Text>
+                    </View>
+                    <View style={styles.propertyDetail}>
+                      <Ionicons name="resize" size={14} color="#6B7280" />
+                      <Text style={styles.propertyDetailText}>{property.size}</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.amenitiesContainer}>
+                    <View style={styles.amenityBadge}>
+                      <Ionicons name="bed" size={22} color="#EA580C" />
+                      <Text style={styles.amenityText}>
+                        {property.beds} Beds
+                      </Text>
+                    </View>
+                    <View style={styles.amenityBadge}>
+                      <FontAwesome6 name="bath" size={18} color="#EA580C" />
+                      <Text style={styles.amenityText}>
+                        {property.baths} Baths
+                      </Text>
+                    </View>
+                    <View style={styles.amenityBadge}>
+                      <Ionicons name="car-sharp" size={22} color="#EA580C" />
+                      <Text style={styles.amenityText}>
+                        {property.parking} Parking
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+      </Animated.ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => setActiveTab('Home')}
+        >
+          <Ionicons 
+            name={activeTab === 'Home' ? 'home' : 'home-outline'} 
+            size={24} 
+            color={activeTab === 'Home' ? '#FB923C' : '#9CA3AF'} 
+          />
+          <Text style={[styles.navText, { color: activeTab === 'Home' ? '#FB923C' : '#9CA3AF' }]}>
+            Home
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => setActiveTab('Search')}
+        >
+          <Ionicons 
+            name={activeTab === 'Search' ? 'search' : 'search-outline'} 
+            size={24} 
+            color={activeTab === 'Search' ? '#FB923C' : '#9CA3AF'} 
+          />
+          <Text style={[styles.navText, { color: activeTab === 'Search' ? '#FB923C' : '#9CA3AF' }]}>
+            Search
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => setActiveTab('Profile')}
+        >
+          <Ionicons 
+            name={activeTab === 'Profile' ? 'person' : 'person-outline'} 
+            size={24} 
+            color={activeTab === 'Profile' ? '#FB923C' : '#9CA3AF'} 
+          />
+          <Text style={[styles.navText, { color: activeTab === 'Profile' ? '#FB923C' : '#9CA3AF' }]}>
+            Profile
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => setActiveTab('Menu')}
+        >
+          <Ionicons 
+            name={activeTab === 'Menu' ? 'menu' : 'menu-outline'} 
+            size={24} 
+            color={activeTab === 'Menu' ? '#FB923C' : '#9CA3AF'} 
+          />
+          <Text style={[styles.navText, { color: activeTab === 'Menu' ? '#FB923C' : '#9CA3AF' }]}>
+            Menu
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
 
 export default PublRealtyHomeScreen 

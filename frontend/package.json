@@ -48,7 +48,10 @@
     "tamagui": "^1.129.4",
     "zod": "^3.25.67",
     "expo-sharing": "~13.1.5",
-    "@react-native-community/slider": "4.5.6"
+    "@react-native-community/slider": "4.5.6",
+    "expo-notifications": "~0.31.3",
+    "expo-device": "~7.1.4",
+    "expo-dev-client": "~5.2.3"
   },
   "devDependencies": {
     "@babel/core": "^7.27.7",

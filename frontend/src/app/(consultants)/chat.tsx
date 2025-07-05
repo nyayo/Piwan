@@ -4,13 +4,14 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { Image } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const PatientCardScreen = () => {
     const [activeTab, setActiveTab] = useState('information');
+    const {COLORS} = useTheme();
 
     const tabs = [
         { id: 'information', label: 'Information' },
@@ -127,159 +128,7 @@ const PatientCardScreen = () => {
         }
     ];
 
-    return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Patient Profile</Text>
-                <TouchableOpacity style={styles.moreButton}>
-                    <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textDark} />
-                </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.contentContainer}>
-                {/* Patient Info Card */}
-                <View style={styles.patientCard}>
-                    <Image source={{ uri: patientData.avatar }} style={styles.patientAvatar} />
-                    <View style={styles.patientInfo}>
-                        <Text style={styles.patientName}>{patientData.name}</Text>
-                        <Text style={styles.patientDetails}>{patientData.age} years • {patientData.condition}</Text>
-                    </View>
-                    <View style={styles.patientActions}>
-                        <TouchableOpacity style={styles.actionButton}>
-                            <Ionicons name="call" size={20} color={COLORS.primary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionButton}>
-                            <MaterialCommunityIcons name="android-messages" size={20} color={COLORS.primary} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Mental Health Metrics */}
-                <View style={styles.metricsContainer}>
-                    {renderMetricCard("happy", "Mood", patientData.moodScore, "/10", COLORS.success, COLORS.success + '20')}
-                    {renderMetricCard("checkmark-circle", "Sessions", patientData.sessionsCompleted, "Done", COLORS.primary, COLORS.primaryLight)}
-                </View>
-
-                {/* Next Session Card */}
-                <View style={styles.nextSessionCard}>
-                    <View style={styles.nextSessionHeader}>
-                        <View style={[styles.nextSessionIcon, { backgroundColor: COLORS.warning + '20' }]}>
-                            <Ionicons name="calendar" size={20} color={COLORS.warning} />
-                        </View>
-                        <View style={styles.nextSessionInfo}>
-                            <Text style={styles.nextSessionTitle}>Next Session</Text>
-                            <Text style={styles.nextSessionDate}>{patientData.nextSession}</Text>
-                        </View>
-                    </View>
-                    <View style={styles.nextSessionActions}>
-                        <TouchableOpacity style={styles.nextSessionActionButton}>
-                            <Ionicons name="notifications" size={18} color={COLORS.warning} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.nextSessionActionButton}>
-                            <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Tab Bar */}
-                {renderTabBar()}
-
-                {/* Tab Content */}
-                {activeTab === 'information' && (
-                    <View style={styles.tabContent}>
-                        <Text style={styles.sectionTitle}>Personal Information</Text>
-                        <View style={styles.infoContainer}>
-                            {renderInformationRow("Full Name", patientData.name, "person")}
-                            {renderInformationRow("Date of Birth", patientData.dateOfBirth, "calendar")}
-                            {renderInformationRow("Age", `${patientData.age} years`, "time")}
-                            {renderInformationRow("Gender", patientData.gender, "male-female")}
-                            {renderInformationRow("Blood Type", patientData.bloodType, "water")}
-                            {renderInformationRow("Height", patientData.height, "resize")}
-                            {renderInformationRow("Weight", patientData.weight, "fitness")}
-                        </View>
-
-                        <Text style={styles.sectionTitle}>Contact Information</Text>
-                        <View style={styles.infoContainer}>
-                            {renderInformationRow("Phone Number", patientData.phoneNumber, "call")}
-                            {renderInformationRow("Email", patientData.email, "mail")}
-                            {renderInformationRow("Address", patientData.address, "location")}
-                            {renderInformationRow("Emergency Contact", patientData.emergencyContact, "alert-circle")}
-                        </View>
-
-                        <Text style={styles.sectionTitle}>Professional Information</Text>
-                        <View style={styles.infoContainer}>
-                            {renderInformationRow("Occupation", patientData.occupation, "briefcase")}
-                        </View>
-
-                        <Text style={styles.sectionTitle}>Current Medications</Text>
-                        <View style={styles.medicationsContainer}>
-                            {patientData.medications.map((medication, index) => (
-                                <View key={index} style={styles.medicationItem}>
-                                    <View style={[styles.medicationIcon, { backgroundColor: COLORS.error + '20' }]}>
-                                        <Ionicons name="medical" size={16} color={COLORS.error} />
-                                    </View>
-                                    <Text style={styles.medicationText}>{medication}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                )}
-
-                {activeTab === 'sessions' && (
-                    <View style={styles.tabContent}>
-                        <Text style={styles.sectionTitle}>Therapy Sessions</Text>
-                        <View style={styles.sessionsContainer}>
-                            {sessionsData.map(renderSessionCard)}
-                        </View>
-                    </View>
-                )}
-
-                {activeTab === 'progress' && (
-                    <View style={styles.tabContent}>
-                        <Text style={styles.sectionTitle}>Progress Overview</Text>
-                        <View style={styles.progressContainer}>
-                            <View style={styles.progressItem}>
-                                <Text style={styles.progressLabel}>Anxiety Level</Text>
-                                <View style={styles.progressBarContainer}>
-                                    <View style={[styles.progressBarFull, { backgroundColor: COLORS.error + '20' }]}>
-                                        <View style={[styles.progressBarFill, { width: '30%', backgroundColor: COLORS.error }]} />
-                                    </View>
-                                    <Text style={styles.progressText}>Low</Text>
-                                </View>
-                            </View>
-                            <View style={styles.progressItem}>
-                                <Text style={styles.progressLabel}>Depression Score</Text>
-                                <View style={styles.progressBarContainer}>
-                                    <View style={[styles.progressBarFull, { backgroundColor: COLORS.warning + '20' }]}>
-                                        <View style={[styles.progressBarFill, { width: '45%', backgroundColor: COLORS.warning }]} />
-                                    </View>
-                                    <Text style={styles.progressText}>Moderate</Text>
-                                </View>
-                            </View>
-                            <View style={styles.progressItem}>
-                                <Text style={styles.progressLabel}>Coping Skills</Text>
-                                <View style={styles.progressBarContainer}>
-                                    <View style={[styles.progressBarFull, { backgroundColor: COLORS.success + '20' }]}>
-                                        <View style={[styles.progressBarFill, { width: '80%', backgroundColor: COLORS.success }]} />
-                                    </View>
-                                    <Text style={styles.progressText}>Good</Text>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-                )}
-            </ScrollView>
-
-            <StatusBar style="dark" />
-        </SafeAreaView>
-    );
-};
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.white,
@@ -649,5 +498,157 @@ const styles = StyleSheet.create({
         minWidth: 60,
     },
 });
+
+    return (
+        <SafeAreaView style={styles.container} edges={['top']}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Patient Profile</Text>
+                <TouchableOpacity style={styles.moreButton}>
+                    <Ionicons name="ellipsis-vertical" size={20} color={COLORS.textDark} />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.contentContainer}>
+                {/* Patient Info Card */}
+                <View style={styles.patientCard}>
+                    <Image source={{ uri: patientData.avatar }} style={styles.patientAvatar} />
+                    <View style={styles.patientInfo}>
+                        <Text style={styles.patientName}>{patientData.name}</Text>
+                        <Text style={styles.patientDetails}>{patientData.age} years • {patientData.condition}</Text>
+                    </View>
+                    <View style={styles.patientActions}>
+                        <TouchableOpacity style={styles.actionButton}>
+                            <Ionicons name="call" size={20} color={COLORS.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.actionButton}>
+                            <MaterialCommunityIcons name="android-messages" size={20} color={COLORS.primary} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Mental Health Metrics */}
+                <View style={styles.metricsContainer}>
+                    {renderMetricCard("happy", "Mood", patientData.moodScore, "/10", COLORS.success, COLORS.success + '20')}
+                    {renderMetricCard("checkmark-circle", "Sessions", patientData.sessionsCompleted, "Done", COLORS.primary, COLORS.primaryLight)}
+                </View>
+
+                {/* Next Session Card */}
+                <View style={styles.nextSessionCard}>
+                    <View style={styles.nextSessionHeader}>
+                        <View style={[styles.nextSessionIcon, { backgroundColor: COLORS.warning + '20' }]}>
+                            <Ionicons name="calendar" size={20} color={COLORS.warning} />
+                        </View>
+                        <View style={styles.nextSessionInfo}>
+                            <Text style={styles.nextSessionTitle}>Next Session</Text>
+                            <Text style={styles.nextSessionDate}>{patientData.nextSession}</Text>
+                        </View>
+                    </View>
+                    <View style={styles.nextSessionActions}>
+                        <TouchableOpacity style={styles.nextSessionActionButton}>
+                            <Ionicons name="notifications" size={18} color={COLORS.warning} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.nextSessionActionButton}>
+                            <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Tab Bar */}
+                {renderTabBar()}
+
+                {/* Tab Content */}
+                {activeTab === 'information' && (
+                    <View style={styles.tabContent}>
+                        <Text style={styles.sectionTitle}>Personal Information</Text>
+                        <View style={styles.infoContainer}>
+                            {renderInformationRow("Full Name", patientData.name, "person")}
+                            {renderInformationRow("Date of Birth", patientData.dateOfBirth, "calendar")}
+                            {renderInformationRow("Age", `${patientData.age} years`, "time")}
+                            {renderInformationRow("Gender", patientData.gender, "male-female")}
+                            {renderInformationRow("Blood Type", patientData.bloodType, "water")}
+                            {renderInformationRow("Height", patientData.height, "resize")}
+                            {renderInformationRow("Weight", patientData.weight, "fitness")}
+                        </View>
+
+                        <Text style={styles.sectionTitle}>Contact Information</Text>
+                        <View style={styles.infoContainer}>
+                            {renderInformationRow("Phone Number", patientData.phoneNumber, "call")}
+                            {renderInformationRow("Email", patientData.email, "mail")}
+                            {renderInformationRow("Address", patientData.address, "location")}
+                            {renderInformationRow("Emergency Contact", patientData.emergencyContact, "alert-circle")}
+                        </View>
+
+                        <Text style={styles.sectionTitle}>Professional Information</Text>
+                        <View style={styles.infoContainer}>
+                            {renderInformationRow("Occupation", patientData.occupation, "briefcase")}
+                        </View>
+
+                        <Text style={styles.sectionTitle}>Current Medications</Text>
+                        <View style={styles.medicationsContainer}>
+                            {patientData.medications.map((medication, index) => (
+                                <View key={index} style={styles.medicationItem}>
+                                    <View style={[styles.medicationIcon, { backgroundColor: COLORS.error + '20' }]}>
+                                        <Ionicons name="medical" size={16} color={COLORS.error} />
+                                    </View>
+                                    <Text style={styles.medicationText}>{medication}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
+
+                {activeTab === 'sessions' && (
+                    <View style={styles.tabContent}>
+                        <Text style={styles.sectionTitle}>Therapy Sessions</Text>
+                        <View style={styles.sessionsContainer}>
+                            {sessionsData.map(renderSessionCard)}
+                        </View>
+                    </View>
+                )}
+
+                {activeTab === 'progress' && (
+                    <View style={styles.tabContent}>
+                        <Text style={styles.sectionTitle}>Progress Overview</Text>
+                        <View style={styles.progressContainer}>
+                            <View style={styles.progressItem}>
+                                <Text style={styles.progressLabel}>Anxiety Level</Text>
+                                <View style={styles.progressBarContainer}>
+                                    <View style={[styles.progressBarFull, { backgroundColor: COLORS.error + '20' }]}>
+                                        <View style={[styles.progressBarFill, { width: '30%', backgroundColor: COLORS.error }]} />
+                                    </View>
+                                    <Text style={styles.progressText}>Low</Text>
+                                </View>
+                            </View>
+                            <View style={styles.progressItem}>
+                                <Text style={styles.progressLabel}>Depression Score</Text>
+                                <View style={styles.progressBarContainer}>
+                                    <View style={[styles.progressBarFull, { backgroundColor: COLORS.warning + '20' }]}>
+                                        <View style={[styles.progressBarFill, { width: '45%', backgroundColor: COLORS.warning }]} />
+                                    </View>
+                                    <Text style={styles.progressText}>Moderate</Text>
+                                </View>
+                            </View>
+                            <View style={styles.progressItem}>
+                                <Text style={styles.progressLabel}>Coping Skills</Text>
+                                <View style={styles.progressBarContainer}>
+                                    <View style={[styles.progressBarFull, { backgroundColor: COLORS.success + '20' }]}>
+                                        <View style={[styles.progressBarFill, { width: '80%', backgroundColor: COLORS.success }]} />
+                                    </View>
+                                    <Text style={styles.progressText}>Good</Text>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                )}
+            </ScrollView>
+
+            <StatusBar style="dark" />
+        </SafeAreaView>
+    );
+};
 
 export default PatientCardScreen;

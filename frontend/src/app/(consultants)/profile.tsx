@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ProfileOption from '../../components/ProfileOption';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/userContext';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../context/authContext';
@@ -22,6 +22,7 @@ import { logoutUser } from '../../services/api';
 
 export default function ProfileScreen() {
   const {user, setUser} = useAuth();
+  const {COLORS} = useTheme();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -79,6 +80,176 @@ export default function ProfileScreen() {
       router.replace('/login');
     }, 300);
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background
+    },
+    profileSection: {
+      alignItems: 'center',
+    },
+    profileInfo: {
+      marginHorizontal: 22,
+      marginVertical: 14,
+      alignItems: "center"
+    },
+    avatar: { 
+      width: 120, 
+      height:120, 
+      borderRadius:120, 
+      borderWidth: 5, 
+      borderColor: COLORS.border,
+      marginTop: -75
+    },
+    userName: {
+      fontSize: 24,
+      fontWeight: '600',
+      color: COLORS.textDark,
+      marginBottom: 2,
+    },
+    userEmail: {
+      fontSize: 16,
+      fontWeight: '400',
+      marginBottom: 2,
+      color: COLORS.textDark,
+    },
+    userBio: {
+      textAlign: "center",
+      color: COLORS.textSecondary
+    },
+    section: {
+      marginHorizontal: 20,
+      marginBottom: 24,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: COLORS.textDark,
+      letterSpacing: 0.5,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+    },
+    optionsCard: {
+      borderRadius: 12,
+      borderWidth: 1,
+      overflow: 'hidden',
+      backgroundColor: COLORS.cardBackground,
+      borderColor: COLORS.lightGrey
+    },
+    separator: {
+      height: 1,
+      marginLeft: 48,
+      backgroundColor: COLORS.lightGrey
+    },
+    appInfo: {
+      alignItems: 'center',
+      paddingVertical: 10,
+      marginBottom: 10,
+    },
+    logoutSection: {
+      marginHorizontal: 20,
+      marginBottom: 20,
+      alignItems: 'center',
+    },
+    logoutButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255, 68, 68, 0.1)',
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 68, 68, 0.2)',
+      width: '100%',
+      maxWidth: 200,
+    },
+    logoutText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: COLORS.error || '#FF4444',
+      marginLeft: 8,
+    },
+    // Custom Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+    },
+    modalContent: {
+      backgroundColor: COLORS.white,
+      borderRadius: 20,
+      padding: 24,
+      width: '100%',
+      maxWidth: 320,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+    modalIconContainer: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: 'rgba(255, 68, 68, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: COLORS.textDark || '#1A1A1A',
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    modalMessage: {
+      fontSize: 16,
+      fontWeight: '400',
+      color: COLORS.textSecondary || '#666666',
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 24,
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      width: '100%',
+      gap: 12,
+    },
+    cancelButton: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      backgroundColor: COLORS.background || '#F5F5F5',
+      borderWidth: 1,
+      borderColor: COLORS.border || '#E5E5E5',
+      alignItems: 'center',
+    },
+    cancelButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: COLORS.textDark || '#1A1A1A',
+    },
+    confirmButton: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      backgroundColor: COLORS.error || '#FF4444',
+      alignItems: 'center',
+    },
+    confirmButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+  });
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -239,173 +410,3 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.white
-  },
-  profileSection: {
-    alignItems: 'center',
-  },
-  profileInfo: {
-    marginHorizontal: 22,
-    marginVertical: 14,
-    alignItems: "center"
-  },
-  avatar: { 
-    width: 120, 
-    height:120, 
-    borderRadius:120, 
-    borderWidth: 5, 
-    borderColor: COLORS.border,
-    marginTop: -75
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    marginBottom: 2,
-  },
-  userEmail: {
-    fontSize: 16,
-    fontWeight: '400',
-    marginBottom: 2,
-    color: COLORS.textDark,
-  },
-  userBio: {
-    textAlign: "center",
-    color: COLORS.textSecondary
-  },
-  section: {
-    marginHorizontal: 20,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    letterSpacing: 0.5,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  optionsCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-    backgroundColor: COLORS.cardBackground,
-    borderColor: COLORS.lightGrey
-  },
-  separator: {
-    height: 1,
-    marginLeft: 48,
-    backgroundColor: COLORS.lightGrey
-  },
-  appInfo: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    marginBottom: 10,
-  },
-  logoutSection: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 68, 68, 0.1)',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 68, 68, 0.2)',
-    width: '100%',
-    maxWidth: 200,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.error || '#FF4444',
-    marginLeft: 8,
-  },
-  // Custom Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  modalIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(255, 68, 68, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textDark || '#1A1A1A',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: COLORS.textSecondary || '#666666',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: COLORS.background || '#F5F5F5',
-    borderWidth: 1,
-    borderColor: COLORS.border || '#E5E5E5',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textDark || '#1A1A1A',
-  },
-  confirmButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: COLORS.error || '#FF4444',
-    alignItems: 'center',
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-});

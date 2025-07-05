@@ -1,21 +1,24 @@
 import { pool } from "../config/db.js";
+import { sendPushNotificationToUser, sendPushNotificationToConsultant } from './UserServices.js';
 
 // Cancel all expired appointments (pending/confirmed) whose start time is more than 15 minutes in the past (UTC)
 export const cancelExpiredAppointments = async () => {
     try {
         // Get all pending/confirmed appointments
         const [appointments] = await pool.query(
-            `SELECT id, appointment_datetime FROM appointments 
+            `SELECT id, appointment_datetime, user_id, consultant_id FROM appointments 
              WHERE status IN ('pending', 'confirmed')`
         );
         const now = new Date();
         const expiredIds = [];
+        const expiredAppointments = [];
         for (const appt of appointments) {
             const apptStart = new Date(appt.appointment_datetime);
             if (!isNaN(apptStart.getTime())) {
                 // Cancel if now > appointment start + 15 min
                 if (now > new Date(apptStart.getTime() + 15 * 60000)) {
                     expiredIds.push(appt.id);
+                    expiredAppointments.push(appt);
                 }
             }
         }
@@ -24,6 +27,25 @@ export const cancelExpiredAppointments = async () => {
                 `UPDATE appointments SET status = 'cancelled', cancellation_reason = 'Missed/Expired', updated_at = CURRENT_TIMESTAMP WHERE id IN (?)`,
                 [expiredIds]
             );
+            // Send notifications to both user and consultant
+            for (const appt of expiredAppointments) {
+                try {
+                    await sendPushNotificationToUser(
+                        appt.user_id,
+                        'Appointment Cancelled',
+                        `Your appointment scheduled for ${appt.appointment_datetime} was cancelled due to no-show/expiry.`,
+                        { appointmentId: appt.id }
+                    );
+                    await sendPushNotificationToConsultant(
+                        appt.consultant_id,
+                        'Appointment Cancelled',
+                        `An appointment scheduled for ${appt.appointment_datetime} was cancelled due to no-show/expiry.`,
+                        { appointmentId: appt.id }
+                    );
+                } catch (notifyErr) {
+                    console.error('Notification error (auto-cancel):', notifyErr);
+                }
+            }
             console.log('Cancelled appointment IDs:', expiredIds);
         }
         return { success: true, cancelled: expiredIds.length };
@@ -597,5 +619,27 @@ export const rescheduleAppointment = async (userId, userType, appointmentId, new
     } catch (error) {
         console.error('Error rescheduling appointment:', error);
         return { success: false, message: "Internal server error" };
+    }
+};
+
+// Get appointments starting in the next X minutes (for reminders)
+export const getUpcomingAppointments = async (minutesAhead = 15) => {
+    try {
+        const now = new Date();
+        const future = new Date(now.getTime() + minutesAhead * 60000);
+        // Only fetch appointments that are not cancelled and not already started
+        const [appointments] = await pool.query(
+            `SELECT a.id, a.user_id, a.consultant_id, a.appointment_datetime, CONCAT(u.first_name, ' ', u.last_name) as user_name, CONCAT(c.first_name, ' ', c.last_name) as consultant_name
+                FROM appointments a
+                JOIN users u ON a.user_id = u.id
+                JOIN consultants c ON a.consultant_id = c.id
+                WHERE a.status IN ('pending', 'confirmed')
+                AND a.appointment_datetime > ? AND a.appointment_datetime <= ?`,
+            [now.toISOString().slice(0, 19).replace('T', ' '), future.toISOString().slice(0, 19).replace('T', ' ')]
+        );
+        return appointments;
+    } catch (error) {
+        console.error('Error fetching upcoming appointments:', error);
+        return [];
     }
 };

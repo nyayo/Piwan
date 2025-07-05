@@ -1,6 +1,6 @@
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native'
 import React, { useState } from 'react'
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 export type TabButtonsType = {
@@ -17,6 +17,7 @@ const TabButtons = ({buttons, selectedTab, setSelectedTab}: TabButtonsProps) => 
     const [dimensions, setDimensions] = useState({ height: 20, width: 100});
     const buttonWidth = dimensions.width / buttons.length;
     const tabPositionX = useSharedValue(0);
+    const { COLORS } = useTheme();
 
     const onTabbarLayout = (e: LayoutChangeEvent) => {
         setDimensions({

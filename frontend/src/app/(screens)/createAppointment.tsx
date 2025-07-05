@@ -18,7 +18,7 @@ import { router, useNavigation } from 'expo-router';
 import { useConsultant } from '../../context/consultantContext';
 import generateTimeSlots from '../../helper/timeSlot';
 import RenderTimeSlot, { TimeSlot } from '../../components/TimeSlot';
-import { createAppointment, getConsultantAppointments, getDateRange } from '../../services/api';
+import { createAppointment, getConsultantAppointments, getDateRange, sendPushNotificationToConsultant } from '../../services/api';
 
 const COLORS = {
   primary: "#1976D2",
@@ -438,6 +438,21 @@ export default function AppointmentScheduleScreen() {
             consultantId: selectedConsultant.id,
             appointmentId: response.appointment.id
           });
+          // Send push notification to consultant
+          try {
+            await sendPushNotificationToConsultant(
+              selectedConsultant.id,
+              'New Appointment Booked',
+              `You have a new appointment with a patient on ${selectedDateObj.fullDate} at ${selectedTimeObj.time}.`,
+              {
+                appointmentId: response.appointment?.id,
+                date: selectedDateObj.fullDate,
+                time: selectedTimeObj.time,
+              }
+            );
+          } catch (notifyErr) {
+            console.warn('Failed to send push notification to consultant:', notifyErr);
+          }
           Alert.alert(
             'Appointment Booked!',
             `Your appointment with ${selectedConsultant.first_name} ${selectedConsultant.last_name} has been scheduled for ${selectedDateObj.fullDate} at ${selectedTimeObj.time}`,

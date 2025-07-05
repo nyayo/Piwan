@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Switch } from 'react-native'
 import React from 'react'
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { PrivacySettingsProps } from '../app/(screens)/privacySecurity';
 
 type PrivacyItemProps = {
@@ -11,24 +11,11 @@ type PrivacyItemProps = {
     handlePrivacySettingChange: (setting: string, value: boolean) => void;
 }
 
-const PrivacyItem = ({title, description, setting, value, handlePrivacySettingChange}: PrivacyItemProps) => {
-    return (
-        <View style={styles.privacyItem}>
-            <View style={styles.privacyItemContent}>
-                <Text style={styles.privacyItemTitle}>{title}</Text>
-                <Text style={styles.privacyItemDescription}>{description}</Text>
-            </View>
-            <Switch
-                value={value}
-                onValueChange={(newValue) => handlePrivacySettingChange(setting, newValue)}
-                trackColor={{ false: COLORS.grey + '40', true: COLORS.primary + '40' }}
-                thumbColor={value ? COLORS.primary : COLORS.grey}
-            />
-        </View>
-        );
-}
 
-const styles = StyleSheet.create({
+const PrivacyItem = ({title, description, setting, value, handlePrivacySettingChange}: PrivacyItemProps) => {
+    const { COLORS } = useTheme();
+
+    const styles = StyleSheet.create({
     privacyItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -52,5 +39,20 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
 })
+    return (
+        <View style={styles.privacyItem}>
+            <View style={styles.privacyItemContent}>
+                <Text style={styles.privacyItemTitle}>{title}</Text>
+                <Text style={styles.privacyItemDescription}>{description}</Text>
+            </View>
+            <Switch
+                value={value}
+                onValueChange={(newValue) => handlePrivacySettingChange(setting, newValue)}
+                trackColor={{ false: COLORS.grey + '40', true: COLORS.primary + '40' }}
+                thumbColor={value ? COLORS.primary : COLORS.grey}
+            />
+        </View>
+        );
+}
 
 export default PrivacyItem;

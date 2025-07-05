@@ -11,7 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import CustomTextInput from '../../components/CustomTextInput';
 import KeyboardAwareScrollView from '../../components/KeyboardAwareView';
 import { useAuth } from '../../context/authContext';
@@ -44,7 +44,10 @@ const ProfileUpdateScreen = () => {
 
     const { user, setUser } = useAuth();
     const { updateProfile } = useUser();
+    const { COLORS, mode } = useTheme();
     const router = useRouter();
+
+    const statusBarStyle = mode === 'dark' || COLORS.background === '#000' ? 'light' : 'dark';
     
     const form = useForm<ProfileUpdateScreen>({
         resolver: zodResolver(ProfileUpdateInfo),
@@ -223,6 +226,177 @@ const ProfileUpdateScreen = () => {
         );
     }
 
+    const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background,
+    },
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        paddingTop: 24,
+        backgroundColor: COLORS.background,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+    },
+    backButton: {
+        padding: 8,
+        marginRight: 12,
+    },
+    headerTextContainer: {
+        flex: 1,
+    },
+    headerTitle: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: COLORS.textDark || '#1a1a1a',
+        letterSpacing: -0.5,
+    },
+    headerSubtitle: {
+        fontSize: 14,
+        color: COLORS.grey || '#666',
+        marginTop: 2,
+        fontWeight: '400',
+    },
+    profileImageSection: {
+        alignItems: 'center',
+        paddingBottom: 25,
+    },
+    avatarContainer: {
+        position: 'relative',
+        marginBottom: 12,
+    },
+    avatar: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        borderWidth: 3,
+        borderColor: COLORS.border,
+    },
+    cameraButton: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: COLORS.primary,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: COLORS.white,
+    },
+    changePhotoText: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+    },
+    formSection: {
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+    },
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: COLORS.textDark,
+        letterSpacing: 0.5,
+        marginBottom: 16,
+        textTransform: 'uppercase',
+    },
+    row: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    halfInput: {
+        flex: 1,
+    },
+    inputContainer: {
+        width: '100%',
+        marginBottom: 20,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: COLORS.textDark,
+        marginBottom: 8,
+    },
+    textInput: {
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        fontSize: 16,
+        borderWidth: 1.5,
+        borderColor: COLORS.grey + '40',
+        borderRadius: 12,
+        backgroundColor: COLORS.inputBackground,
+        color: COLORS.textPrimary,
+    },
+    textInputFocused: {
+        borderColor: COLORS.primary,
+        borderWidth: 2,
+        shadowColor: COLORS.primary,
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    pickerContainer: {
+        borderWidth: 1.5,
+        borderColor: COLORS.grey + '40',
+        borderRadius: 12,
+        backgroundColor: COLORS.inputBackground,
+        overflow: 'hidden',
+    },
+    picker: {
+        height: 56,
+        color: COLORS.textPrimary,
+    },
+    updateButton: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 12,
+        marginBottom: 16,
+        width: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: COLORS.primary,
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        }, 
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    updateButtonDisabled: {
+        backgroundColor: COLORS.grey,
+        shadowOpacity: 0.1,
+    },
+    updateButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.white,
+    },
+    requiredText: {
+        textAlign: "center",
+        fontSize: 12,
+        color: COLORS.grey,
+        fontStyle: 'italic',
+    },
+    uploadingText: {
+        textAlign: "center",
+        fontSize: 12,
+        color: COLORS.primary,
+        marginTop: 8,
+        fontStyle: 'italic',
+    },
+});
+
     return (
         <View style={styles.container}>
             {/* Custom Header */}
@@ -370,183 +544,12 @@ const ProfileUpdateScreen = () => {
                 </View>
                 </FormProvider>
             </KeyboardAwareScrollView>
-            <StatusBar style="dark" />
+            <StatusBar style={statusBarStyle} />
             {showSuccessMessage && (
                 <ToastMessage />
             )}
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fafafa',
-    },
-    headerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        paddingTop: 24,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    backButton: {
-        padding: 8,
-        marginRight: 12,
-    },
-    headerTextContainer: {
-        flex: 1,
-    },
-    headerTitle: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: COLORS.textDark || '#1a1a1a',
-        letterSpacing: -0.5,
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: COLORS.grey || '#666',
-        marginTop: 2,
-        fontWeight: '400',
-    },
-    profileImageSection: {
-        alignItems: 'center',
-        paddingBottom: 25,
-    },
-    avatarContainer: {
-        position: 'relative',
-        marginBottom: 12,
-    },
-    avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        borderWidth: 3,
-        borderColor: COLORS.border,
-    },
-    cameraButton: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: COLORS.primary,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: COLORS.white,
-    },
-    changePhotoText: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-    },
-    formSection: {
-        paddingHorizontal: 20,
-        paddingBottom: 40,
-    },
-    sectionTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: COLORS.textDark,
-        letterSpacing: 0.5,
-        marginBottom: 16,
-        textTransform: 'uppercase',
-    },
-    row: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    halfInput: {
-        flex: 1,
-    },
-    inputContainer: {
-        width: '100%',
-        marginBottom: 20,
-    },
-    inputLabel: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: COLORS.textDark,
-        marginBottom: 8,
-    },
-    textInput: {
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        fontSize: 16,
-        borderWidth: 1.5,
-        borderColor: COLORS.grey + '40',
-        borderRadius: 12,
-        backgroundColor: COLORS.white,
-        color: COLORS.textPrimary,
-    },
-    textInputFocused: {
-        borderColor: COLORS.primary,
-        borderWidth: 2,
-        shadowColor: COLORS.primary,
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    pickerContainer: {
-        borderWidth: 1.5,
-        borderColor: COLORS.grey + '40',
-        borderRadius: 12,
-        backgroundColor: COLORS.white,
-        overflow: 'hidden',
-    },
-    picker: {
-        height: 56,
-        color: COLORS.textPrimary,
-    },
-    updateButton: {
-        backgroundColor: COLORS.primary,
-        paddingVertical: 16,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        marginBottom: 16,
-        width: "100%",
-        alignItems: "center",
-        justifyContent: "center",
-        shadowColor: COLORS.primary,
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        }, 
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 3,
-    },
-    updateButtonDisabled: {
-        backgroundColor: COLORS.grey,
-        shadowOpacity: 0.1,
-    },
-    updateButtonText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: COLORS.white,
-    },
-    requiredText: {
-        textAlign: "center",
-        fontSize: 12,
-        color: COLORS.grey,
-        fontStyle: 'italic',
-    },
-    uploadingText: {
-        textAlign: "center",
-        fontSize: 12,
-        color: COLORS.primary,
-        marginTop: 8,
-        fontStyle: 'italic',
-    },
-});
 
 export default ProfileUpdateScreen;

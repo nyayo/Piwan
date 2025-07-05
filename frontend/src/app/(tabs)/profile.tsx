@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ProfileOption from '../../components/ProfileOption';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/userContext';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../context/authContext';
@@ -21,6 +21,7 @@ import { logoutUser } from '../../services/api';
 
 export default function ProfileScreen() {
   const {user, setUser} = useAuth();
+  const { COLORS } = useTheme();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -77,135 +78,7 @@ export default function ProfileScreen() {
     }, 300);
   };
 
-  return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.profileSection}>
-        <Image style={{ 
-          width: '100%', 
-          aspectRatio: 19/7
-        }} 
-        source={{ uri: user?.profile_image || undefined }}
-        blurRadius={8}
-        />
-        <Image 
-          style={styles.avatar} 
-          source={{uri: user?.profile_image || undefined}} 
-        />
-        <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{user?.first_name} {user?.last_name}</Text>
-          <Text style={styles.userEmail}>{user?.email}</Text>
-          <Text style={styles.userBio}>{user?.bio}</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>GENERAL</Text>
-        <View style={styles.optionsCard}>
-          <ProfileOption
-            title="Profile Settings"
-            description="Update your profile"
-            icon="person-outline"
-            onPress={() => handleOptionPress('profile')}
-          />
-          <View style={styles.separator} />
-          <ProfileOption
-            title="Privacy & Security"
-            description="Change password & privacy"
-            icon="lock-closed-outline"
-            onPress={() => handleOptionPress('privacy')}
-          />
-          <View style={styles.separator} />
-          <ProfileOption
-            title="Preferences"
-            description="App settings & preferences"
-            icon="settings-outline"
-            onPress={() => handleOptionPress('settings')}
-          />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>SUPPORT</Text>
-        <View style={styles.optionsCard}>
-          <ProfileOption
-            title="Help Center"
-            description="Get help and support"
-            icon="help-circle-outline"
-            onPress={() => handleOptionPress('help')}
-          />
-          <View style={styles.separator} />
-          <ProfileOption
-            title="Terms & Privacy"
-            description="View our policies"
-            icon="document-text-outline"
-            onPress={() => handleOptionPress('terms')}
-          />
-        </View>
-      </View>
-
-      <View style={styles.logoutSection}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutCustom}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.error || '#FF4444'} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.appInfo}>
-        <Text style={styles.sectionTitle}>Version 1.0.0</Text>
-      </View>
-
-      <Modal
-        visible={showLogoutModal}
-        transparent={true}
-        animationType="none"
-        onRequestClose={closeModal}
-      >
-        <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-          <Animated.View 
-            style={[
-              styles.modalContent,
-              {
-                transform: [{
-                  scale: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.9, 1],
-                  })
-                }]
-              }
-            ]}
-          >
-            {/* Modal Icon */}
-            <View style={styles.modalIconContainer}>
-              <Ionicons name="log-out-outline" size={32} color={COLORS.error || '#FF4444'} />
-            </View>
-
-            {/* Modal Title */}
-            <Text style={styles.modalTitle}>Logout Confirmation</Text>
-            
-            {/* Modal Message */}
-            <Text style={styles.modalMessage}>
-              Are you sure you want to logout? You'll need to sign in again to access your account.
-            </Text>
-
-            {/* Modal Buttons */}
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.confirmButton} onPress={confirmLogout}>
-                <Text style={styles.confirmButtonText}>Logout</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
-      <StatusBar style="light" />      
-    </ScrollView>
-  );
-}
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white
@@ -373,3 +246,131 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
+
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.profileSection}>
+        <Image style={{ 
+          width: '100%', 
+          aspectRatio: 19/7
+        }} 
+        source={{ uri: user?.profile_image || undefined }}
+        blurRadius={8}
+        />
+        <Image 
+          style={styles.avatar} 
+          source={{uri: user?.profile_image || undefined}} 
+        />
+        <View style={styles.profileInfo}>
+          <Text style={styles.userName}>{user?.first_name} {user?.last_name}</Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
+          <Text style={styles.userBio}>{user?.bio}</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>GENERAL</Text>
+        <View style={styles.optionsCard}>
+          <ProfileOption
+            title="Profile Settings"
+            description="Update your profile"
+            icon="person-outline"
+            onPress={() => handleOptionPress('profile')}
+          />
+          <View style={styles.separator} />
+          <ProfileOption
+            title="Privacy & Security"
+            description="Change password & privacy"
+            icon="lock-closed-outline"
+            onPress={() => handleOptionPress('privacy')}
+          />
+          <View style={styles.separator} />
+          <ProfileOption
+            title="Preferences"
+            description="App settings & preferences"
+            icon="settings-outline"
+            onPress={() => handleOptionPress('settings')}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>SUPPORT</Text>
+        <View style={styles.optionsCard}>
+          <ProfileOption
+            title="Help Center"
+            description="Get help and support"
+            icon="help-circle-outline"
+            onPress={() => handleOptionPress('help')}
+          />
+          <View style={styles.separator} />
+          <ProfileOption
+            title="Terms & Privacy"
+            description="View our policies"
+            icon="document-text-outline"
+            onPress={() => handleOptionPress('terms')}
+          />
+        </View>
+      </View>
+
+      <View style={styles.logoutSection}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutCustom}>
+          <Ionicons name="log-out-outline" size={20} color={COLORS.error || '#FF4444'} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.appInfo}>
+        <Text style={styles.sectionTitle}>Version 1.0.0</Text>
+      </View>
+
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={closeModal}
+      >
+        <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+          <Animated.View 
+            style={[
+              styles.modalContent,
+              {
+                transform: [{
+                  scale: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.9, 1],
+                  })
+                }]
+              }
+            ]}
+          >
+            {/* Modal Icon */}
+            <View style={styles.modalIconContainer}>
+              <Ionicons name="log-out-outline" size={32} color={COLORS.error || '#FF4444'} />
+            </View>
+
+            {/* Modal Title */}
+            <Text style={styles.modalTitle}>Logout Confirmation</Text>
+            
+            {/* Modal Message */}
+            <Text style={styles.modalMessage}>
+              Are you sure you want to logout? You'll need to sign in again to access your account.
+            </Text>
+
+            {/* Modal Buttons */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.confirmButton} onPress={confirmLogout}>
+                <Text style={styles.confirmButtonText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+      <StatusBar style="light" />      
+    </ScrollView>
+  );
+}

@@ -1,4 +1,4 @@
-import {registerUser, loginUser, registerConsultant, storeRefreshToken, revokeRefreshToken, findRefreshToken, changePasswordForAnyRole} from '../services/AuthServices.js';
+import {registerUser, loginUser, registerConsultant, storeRefreshToken, revokeRefreshToken, findRefreshToken, changePasswordForAnyRole, saveAuthPushToken, sendPushNotificationToAuth} from '../services/AuthServices.js';
 import { pool } from "../config/db.js";
 import { logActivity } from "../routes/activityRoutes.js";
 import jwt from 'jsonwebtoken';
@@ -151,6 +151,32 @@ export const changePassword = async (req, res) => {
         res.json(result);
     } else {
         res.status(400).json(result);
+    }
+};
+
+export const savePushToken = async (req, res) => {
+    try {
+        const { authId, pushToken } = req.body;
+        if (!authId || !pushToken) {
+        return res.status(400).json({ error: 'authId and pushToken are required' });
+        }
+        await saveAuthPushToken(authId, pushToken);
+        res.status(200).json({ message: 'Push token saved successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const sendPushNotification = async (req, res) => {
+    try {
+        const { authId, title, body, data } = req.body;
+        if (!authId || !title || !body) {
+        return res.status(400).json({ error: 'authId, title, and body are required' });
+        }
+        const result = await sendPushNotificationToAuth(authId, title, body, data);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 };
 

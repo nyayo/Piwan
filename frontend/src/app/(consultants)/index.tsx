@@ -9,8 +9,8 @@ import { LineChart } from 'react-native-chart-kit';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { fetchResources } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 
-import COLORS from '../../constants/theme';
 import { useAuth } from '../../context/authContext';
 import { getConsultantAppointments, getConsultantReviewsPaginated } from '../../services/api';
 import { convertToLocalDate, formatTime } from '../../helper/convertDateTime';
@@ -74,7 +74,8 @@ interface Resource {
 }
 
 const ConsultantAdminHome = () => {
-  const {user}: {user?: User} = useAuth() as {user?: User};
+  const { user }: { user?: User } = useAuth() as { user?: User };
+  const { COLORS, mode } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
   const flatListRef = useRef<FlatList<Appointment>>(null);
@@ -94,23 +95,25 @@ const ConsultantAdminHome = () => {
   // Add state for mood trends
   const [moodTrends, setMoodTrends] = useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] });
 
+  const statusBarStyle = mode === 'dark' || COLORS.background === '#000' ? 'light' : 'dark';
+
   useEffect(() => {
-  const loadResources = async () => {
-    setResourcesLoading(true);
-    setResourcesError(null);
-    try {
-      const data = await fetchResources();
-      console.log('Fetched resources:', data);
-      setResources(data.resources || []);
-    } catch (err) {
-      console.log('Resource fetch error:', err);
-      setResourcesError('Failed to load resources.');
-    } finally {
-      setResourcesLoading(false);
-    }
-  };
-  loadResources();
-}, []);
+    const loadResources = async () => {
+      setResourcesLoading(true);
+      setResourcesError(null);
+      try {
+        const data = await fetchResources();
+        console.log('Fetched resources:', data);
+        setResources(data.resources || []);
+      } catch (err) {
+        console.log('Resource fetch error:', err);
+        setResourcesError('Failed to load resources.');
+      } finally {
+        setResourcesLoading(false);
+      }
+    };
+    loadResources();
+  }, []);
 
   useEffect(() => {
     const fetchConfirmedAppointments = async () => {
@@ -156,7 +159,7 @@ const ConsultantAdminHome = () => {
             ? result.reviews.reduce((sum: number, r: Review) => sum + (r.rating || 0), 0) / result.reviews.length
             : 0;
           // Distribution: count of each star (1-5)
-          const ratingDistribution = [5,4,3,2,1].map(star => ({
+          const ratingDistribution = [5, 4, 3, 2, 1].map(star => ({
             stars: star,
             count: result.reviews.filter((r: Review) => r.rating === star).length
           }));
@@ -276,22 +279,22 @@ const ConsultantAdminHome = () => {
           </Text>
         </View>
         <View style={styles.moodIndicator}>
-          <Ionicons 
-            name={((item.mood ?? 0) >= 7 ? "happy" : (item.mood ?? 0) >= 5 ? "happy-outline" : "sad-outline") as any} 
-            size={16} 
-            color={(item.mood ?? 0) >= 7 ? "#4CAF50" : (item.mood ?? 0) >= 5 ? "#FFC107" : "#F44336"} 
+          <Ionicons
+            name={((item.mood ?? 0) >= 7 ? "happy" : (item.mood ?? 0) >= 5 ? "happy-outline" : "sad-outline") as any}
+            size={16}
+            color={(item.mood ?? 0) >= 7 ? "#4CAF50" : (item.mood ?? 0) >= 5 ? "#FFC107" : "#F44336"}
           />
           <Text style={styles.moodText}>{item.mood !== undefined ? item.mood : '-'} /10</Text>
         </View>
       </View>
-      
+
       <View style={styles.patientSection}>
         <Image source={{ uri: item.profile_image }} style={styles.patientAvatar} />
         <View style={styles.patientInfo}>
           <Text style={styles.patientName}>{item.user_name}</Text>
           <Text style={styles.conditionText}>{truncateWords({ text: item.description, maxWords: 5 })}</Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.chatButton}
           onPress={() => handleChatPress(item)}
         >
@@ -357,7 +360,7 @@ const ConsultantAdminHome = () => {
           </View>
         </View>
       </View>
-      
+
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
           <View style={styles.statContent}>
@@ -399,9 +402,9 @@ const ConsultantAdminHome = () => {
               <Text style={styles.moodLabel}>{mood.mood}</Text>
             </View>
             <View style={styles.moodRight}>
-              <View style={[styles.moodBar, { backgroundColor: mood.color + '20' }]}> 
-                <View 
-                  style={[styles.moodBarFill, { backgroundColor: mood.color, width: `${(mood.count / total) * 100}%` }]} 
+              <View style={[styles.moodBar, { backgroundColor: mood.color + '20' }]}>
+                <View
+                  style={[styles.moodBarFill, { backgroundColor: mood.color, width: `${(mood.count / total) * 100}%` }]}
                 />
               </View>
               <Text style={styles.moodCount}>{mood.count}</Text>
@@ -486,7 +489,7 @@ const ConsultantAdminHome = () => {
                 );
               })}
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={() => router.push('/(screens)/consultants/resourceLibrary')}
             >
@@ -507,11 +510,11 @@ const ConsultantAdminHome = () => {
           <Text style={styles.averageRating}>{reviewStats.averageRating.toFixed(1)}</Text>
           <View style={styles.starsContainer}>
             {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons 
-                key={star} 
-                name="star" 
-                size={20} 
-                color={star <= Math.floor(reviewStats.averageRating) ? "#FFD700" : "#E0E0E0"} 
+              <Ionicons
+                key={star}
+                name="star"
+                size={20}
+                color={star <= Math.floor(reviewStats.averageRating) ? "#FFD700" : "#E0E0E0"}
               />
             ))}
           </View>
@@ -522,11 +525,11 @@ const ConsultantAdminHome = () => {
             <View key={index} style={styles.ratingRow}>
               <Text style={styles.starLabel}>{rating.stars}★</Text>
               <View style={styles.ratingBarContainer}>
-                <View 
+                <View
                   style={[
-                    styles.ratingBarFill, 
+                    styles.ratingBarFill,
                     { width: `${(reviewStats.totalReviews ? (rating.count / reviewStats.totalReviews) * 100 : 0)}%` }
-                  ]} 
+                  ]}
                 />
               </View>
               <Text style={styles.ratingCount}>{rating.count}</Text>
@@ -563,39 +566,516 @@ const ConsultantAdminHome = () => {
   const renderReportsTab = () => (
     <View style={styles.tabContent}>
       <Text style={styles.tabTitle}>Generate Reports</Text>
-      
+
       <View style={styles.reportOptions}>
         <TouchableOpacity style={styles.reportCard}>
           <Ionicons name="bar-chart-outline" size={32} color={COLORS.primary} />
           <Text style={styles.reportTitle}>Patient Progress</Text>
           <Text style={styles.reportDescription}>Weekly/Monthly progress reports</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.reportCard}>
           <Ionicons name="pie-chart-outline" size={32} color={COLORS.primary} />
           <Text style={styles.reportTitle}>Mood Analytics</Text>
           <Text style={styles.reportDescription}>Mood trends and patterns</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.reportCard}>
           <Ionicons name="trending-up-outline" size={32} color={COLORS.primary} />
           <Text style={styles.reportTitle}>Performance Report</Text>
           <Text style={styles.reportDescription}>Your consultation metrics</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.reportCard}>
           <Ionicons name="calendar-outline" size={32} color={COLORS.primary} />
           <Text style={styles.reportTitle}>Appointment Summary</Text>
           <Text style={styles.reportDescription}>Schedule and attendance data</Text>
         </TouchableOpacity>
       </View>
-      
+
       <TouchableOpacity style={styles.actionButton}>
         <Ionicons name="download-outline" size={20} color={COLORS.white} />
         <Text style={styles.actionButtonText}>Generate Custom Report</Text>
       </TouchableOpacity>
     </View>
   );
+  
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    // Top Bar Styles
+    topBar: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingVertical: 20,
+      gap: 12,
+      alignItems: 'center',
+    },
+    profileImg: {
+      width: 50,
+      height: 50,
+      borderRadius: 50,
+      borderWidth: 2.5,
+      borderColor: COLORS.border,
+    },
+    profileInfo: {
+      justifyContent: 'center',
+      flex: 1,
+    },
+    homeGreeting: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: COLORS.textDark,
+    },
+    greeting: {
+      color: COLORS.grey,
+      fontSize: 14,
+      marginTop: 2,
+    },
+    rightIcons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 18,
+      justifyContent: 'flex-end',
+    },
+    notificationDot: {
+      borderRadius: 8,
+      width: 8,
+      height: 8,
+      backgroundColor: COLORS.primary,
+      position: 'absolute',
+      right: 2,
+      top: 3,
+      zIndex: 1,
+    },
+    // Appointments Section
+    appointmentsSection: {
+      paddingHorizontal: 16,
+      marginTop: 8,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: COLORS.textDark,
+    },
+    seeAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    seeAllText: {
+      fontSize: 14,
+      color: COLORS.primary,
+      fontWeight: '600',
+    },
+    carouselContainer: {
+      paddingHorizontal: 16,
+    },
+    // Appointment Carousel Card Styles
+    appointmentCarouselCard: {
+      backgroundColor: COLORS.cardBackground,
+      borderRadius: 20,
+      padding: 20,
+      marginHorizontal: 8,
+      marginVertical: 5,
+      width: screenWidth - 48,
+      borderColor: COLORS.lightGrey,
+      borderWidth: 1,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 5,
+    },
+    statusBadge: {
+      backgroundColor: COLORS.infoBackground,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    statusText: {
+      color: COLORS.infoText,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    moodIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: COLORS.background,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    moodText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: COLORS.textDark,
+    },
+    patientSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 15,
+      gap: 12,
+    },
+    patientAvatar: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      borderWidth: 2,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    patientInfo: {
+      flex: 1,
+    },
+    patientName: {
+      color: COLORS.textPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    conditionText: {
+      color: COLORS.textSecondary,
+      fontSize: 14,
+      opacity: 0.8,
+      marginBottom: 6,
+    },
+    chatButton: {
+      backgroundColor: COLORS.primary,
+      borderRadius: 12,
+      padding: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      shadowColor: COLORS.textDark,
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.20,
+      shadowRadius: 1.41,
+      elevation: 2,
+    },
+    dateTimeContainer: {
+      marginTop: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: COLORS.background,
+      padding: 12,
+      borderRadius: 12
+    },
+    dateTime: {
+      flexDirection: "row",
+      gap: 5,
+      alignItems: "center"
+    },
+    appointmentDate: {
+      color: COLORS.textPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    appointmentTime: {
+      color: COLORS.textPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    // Pagination Styles
+    paginationContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 16,
+      gap: 8,
+    },
+    paginationDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    paginationDotActive: {
+      backgroundColor: COLORS.primary,
+    },
+    paginationDotInactive: {
+      backgroundColor: COLORS.lightGrey,
+    },
+    // Tab Styles
+    tabContainer: {
+      paddingHorizontal: 16,
+      marginTop: 30,
+    },
+    tabScrollContainer: {
+      paddingRight: 16,
+    },
+    tabButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginRight: 12,
+      borderRadius: 25,
+      backgroundColor: COLORS.cardBackground,
+      borderWidth: 1,
+      borderColor: COLORS.lightGrey,
+    },
+    tabButtonActive: {
+      backgroundColor: COLORS.primary,
+      borderColor: COLORS.primary,
+    },
+    tabButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: COLORS.textSecondary,
+    },
+    tabButtonTextActive: {
+      color: COLORS.white,
+    },
+    // Tab Content Styles
+    tabContent: {
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 30,
+    },
+    tabTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: COLORS.textDark,
+      marginBottom: 20,
+    },
+    // Stats Styles
+    statsRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 12,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: COLORS.cardBackground,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: COLORS.lightGrey,
+    },
+    statContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    statIconContainer: {
+      backgroundColor: COLORS.primaryLight,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    statTextContainer: {
+      flex: 1,
+    },
+    statTitle: {
+      fontSize: 12,
+      color: COLORS.textSecondary,
+      marginBottom: 2,
+    },
+    statValue: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: COLORS.textDark,
+      marginBottom: 2,
+    },
+    statChange: {
+      fontSize: 11,
+      color: COLORS.textSecondary,
+    },
+    // Mood Tab Styles
+    moodItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.lightGrey,
+    },
+    moodLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
+    },
+    moodLabel: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: COLORS.textDark,
+    },
+    moodRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 2,
+    },
+    moodBar: {
+      height: 8,
+      borderRadius: 4,
+      flex: 1,
+      overflow: 'hidden',
+    },
+    moodBarFill: {
+      height: '100%',
+      borderRadius: 4,
+    },
+    moodCount: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: COLORS.textDark,
+      minWidth: 30,
+      textAlign: 'center',
+    },
+    // Resources Tab Styles
+    resourceGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: 12,
+      justifyContent: 'space-between',
+    },
+    resourceCard: {
+      width: '48%', // Two columns with spacing
+      backgroundColor: COLORS.cardBackground,
+      borderRadius: 16,
+      padding: 20,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: COLORS.lightGrey,
+      marginBottom: 12,
+    },
+
+    resourceCount: {
+      color: COLORS.textDark
+    },
+    resourceLabel: {
+      color: COLORS.textDark
+    },
+  
+    // Reviews Tab Styles
+    ratingOverview: {
+      flexDirection: 'row',
+      backgroundColor: COLORS.cardBackground,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: COLORS.lightGrey,
+    },
+    ratingLeft: {
+      flex: 1,
+      alignItems: 'center',
+      paddingRight: 20,
+    },
+    averageRating: {
+      fontSize: 36,
+      fontWeight: 'bold',
+      color: COLORS.textDark,
+      marginBottom: 8,
+    },
+    starsContainer: {
+      flexDirection: 'row',
+      gap: 2,
+      marginBottom: 8,
+    },
+    totalReviews: {
+      fontSize: 14,
+      color: COLORS.textSecondary,
+    },
+    ratingRight: {
+      flex: 2,
+    },
+    ratingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 6,
+      gap: 8,
+    },
+    starLabel: {
+      fontSize: 12,
+      color: COLORS.textSecondary,
+      minWidth: 20,
+    },
+    ratingBarContainer: {
+      flex: 1,
+      height: 6,
+      backgroundColor: '#E0E0E0',
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    ratingBarFill: {
+      height: '100%',
+      backgroundColor: '#FFD700',
+    },
+    ratingCount: {
+      fontSize: 12,
+      color: COLORS.textSecondary,
+      minWidth: 30,
+      textAlign: 'right',
+    },
+    // Reports Tab Styles
+    reportOptions: {
+      gap: 12,
+    },
+    reportCard: {
+      backgroundColor: COLORS.cardBackground,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: COLORS.lightGrey,
+      alignItems: 'center',
+    },
+    reportTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: COLORS.textDark,
+      marginTop: 12,
+      marginBottom: 4,
+    },
+    reportDescription: {
+      fontSize: 12,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+    },
+    // Action Button Styles
+    actionButton: {
+      backgroundColor: COLORS.primary,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: 20,
+      shadowColor: COLORS.textDark,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    actionButtonText: {
+      color: COLORS.white,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -611,7 +1091,7 @@ const ConsultantAdminHome = () => {
               <Text style={styles.homeGreeting}>Dr. {user?.first_name} {user?.last_name}</Text>
               <Text style={styles.greeting}>Ready to help clients today?</Text>
             </View>
-            <View style={styles.rightIcons}> 
+            <View style={styles.rightIcons}>
               <TouchableOpacity onPress={handleNotificationPress}>
                 <View style={styles.notificationDot} />
                 <Ionicons name="notifications-outline" size={24} color={COLORS.textDark} />
@@ -670,7 +1150,7 @@ const ConsultantAdminHome = () => {
 
           {/* Tabs and Tab Content ...existing code... */}
           <View style={styles.tabContainer}>
-            <ScrollView  horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContainer}>
               {tabsData.map((tab) => (
                 <TouchableOpacity
                   key={tab.id}
@@ -694,480 +1174,12 @@ const ConsultantAdminHome = () => {
           </View>
 
         </ScrollView>
-        <StatusBar style="dark" />
+        <StatusBar style={statusBarStyle} />
       </SafeAreaView>
     </GestureHandlerRootView>
   );
+
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-  },
-  // Top Bar Styles
-  topBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    gap: 12,
-    alignItems: 'center',
-  },
-  profileImg: {
-    width: 50,
-    height: 50,
-    borderRadius: 50,
-    borderWidth: 2.5,
-    borderColor: COLORS.border,
-  },
-  profileInfo: {
-    justifyContent: 'center',
-    flex: 1,
-  },
-  homeGreeting: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.textDark,
-  },
-  greeting: {
-    color: COLORS.grey,
-    fontSize: 14,
-    marginTop: 2,
-  },
-  rightIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 18,
-    justifyContent: 'flex-end',
-  },
-  notificationDot: {
-    borderRadius: 8,
-    width: 8,
-    height: 8,
-    backgroundColor: COLORS.primary,
-    position: 'absolute',
-    right: 2,
-    top: 3,
-    zIndex: 1,
-  },
-  // Appointments Section
-  appointmentsSection: {
-    paddingHorizontal: 16,
-    marginTop: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.textDark,
-  },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  carouselContainer: {
-    paddingHorizontal: 16,
-  },
-  // Appointment Carousel Card Styles
-  appointmentCarouselCard: {
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 8,
-    marginVertical: 5,
-    width: screenWidth - 48,
-    borderColor: COLORS.lightGrey,
-    borderWidth: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  statusBadge: {
-    backgroundColor: COLORS.infoBackground,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusText: {
-    color: COLORS.infoText,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  moodIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  moodText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.textDark,
-  },
-  patientSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-    gap: 12,
-  },
-  patientAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  patientInfo: {
-    flex: 1,
-  },
-  patientName: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  conditionText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    opacity: 0.8,
-    marginBottom: 6,
-  },
-  chatButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    shadowColor: COLORS.textDark,
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.20,
-    shadowRadius: 1.41,
-    elevation: 2,
-  },
-  dateTimeContainer: {
-    marginTop: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: COLORS.white,
-    padding: 12,
-    borderRadius: 12
-  },
-  dateTime: {
-    flexDirection: "row",
-    gap: 5, 
-    alignItems: "center"
-  },
-  appointmentDate: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  appointmentTime: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Pagination Styles
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-    gap: 8,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  paginationDotActive: {
-    backgroundColor: COLORS.primary,
-  },
-  paginationDotInactive: {
-    backgroundColor: COLORS.lightGrey,
-  },
-  // Tab Styles
-  tabContainer: {
-    paddingHorizontal: 16,
-    marginTop: 30,
-  },
-  tabScrollContainer: {
-    paddingRight: 16,
-  },
-  tabButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginRight: 12,
-    borderRadius: 25,
-    backgroundColor: COLORS.cardBackground,
-    borderWidth: 1,
-    borderColor: COLORS.lightGrey,
-  },
-  tabButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  tabButtonTextActive: {
-    color: COLORS.white,
-  },
-  // Tab Content Styles
-  tabContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 30,
-  },
-  tabTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.textDark,
-    marginBottom: 20,
-  },
-  // Stats Styles
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.lightGrey,
-  },
-  statContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  statIconContainer: {
-    backgroundColor: COLORS.primaryLight,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statTextContainer: {
-    flex: 1,
-  },
-  statTitle: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.textDark,
-    marginBottom: 2,
-  },
-  statChange: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-  },
-  // Mood Tab Styles
-  moodItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGrey,
-  },
-  moodLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  moodLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.textDark,
-  },
-  moodRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 2,
-  },
-  moodBar: {
-    height: 8,
-    borderRadius: 4,
-    flex: 1,
-    overflow: 'hidden',
-  },
-  moodBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  moodCount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    minWidth: 30,
-    textAlign: 'center',
-  },
-  // Resources Tab Styles
-  resourceGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-    justifyContent: 'space-between',
-  },
-  resourceCard: {
-    width: '48%', // Two columns with spacing
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.lightGrey,
-    marginBottom: 12,
-  },
-
-  // Reviews Tab Styles
-  ratingOverview: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: COLORS.lightGrey,
-  },
-  ratingLeft: {
-    flex: 1,
-    alignItems: 'center',
-    paddingRight: 20,
-  },
-  averageRating: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: COLORS.textDark,
-    marginBottom: 8,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    gap: 2,
-    marginBottom: 8,
-  },
-  totalReviews: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  ratingRight: {
-    flex: 2,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
-  },
-  starLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    minWidth: 20,
-  },
-  ratingBarContainer: {
-    flex: 1,
-    height: 6,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  ratingBarFill: {
-    height: '100%',
-    backgroundColor: '#FFD700',
-  },
-  ratingCount: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    minWidth: 30,
-    textAlign: 'right',
-  },
-  // Reports Tab Styles
-  reportOptions: {
-    gap: 12,
-  },
-  reportCard: {
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.lightGrey,
-    alignItems: 'center',
-  },
-  reportTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textDark,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  reportDescription: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  // Action Button Styles
-  actionButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 20,
-    shadowColor: COLORS.textDark,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  actionButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 
 export default ConsultantAdminHome;

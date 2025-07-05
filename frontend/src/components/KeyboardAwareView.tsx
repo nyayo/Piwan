@@ -1,9 +1,10 @@
 import { ScrollView, KeyboardAvoidingView, Platform } from 'react-native'
 import React, { PropsWithChildren } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import COLORS from '../constants/theme'
+import { useTheme } from '../context/ThemeContext'
 
 const KeyboardAwareScrollView = ({children} : PropsWithChildren) => {
+    const { COLORS } = useTheme();
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={['bottom']}>
             <KeyboardAvoidingView 

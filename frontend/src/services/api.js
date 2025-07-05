@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure base URL (update with your backend URL)
-export const API_BASE_URL = 'https://abfa-41-75-176-135.ngrok-free.app/api'; // Use your local IP
+export const API_BASE_URL = 'https://b7ff-41-75-182-148.ngrok-free.app/api'; // Use your local IP
 // For development on physical device, use your computer's IP address
 // For iOS simulator: http://localhost:3000/api
 // For Android emulator: http://10.0.2.2:3000/api
@@ -525,6 +525,80 @@ export const changePassword = async ({ currentPassword, newPassword }) => {
     return response.data;
   } catch (error) {
     throw handleApiError(error);
+  }
+};
+
+// --- Push Notification API ---
+export const saveUserPushToken = async (userId, pushToken) => {
+  try {
+    const response = await apiClient.post('/users/push-token', { userId, pushToken });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const saveConsultantPushToken = async (consultantId, pushToken) => {
+  try {
+    const response = await apiClient.post('/users/consultant/push-token', { consultantId, pushToken });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const sendPushNotificationToUser = async (userId, title, body, data = {}) => {
+  try {
+    const response = await apiClient.post('/users/send-notification', { userId, title, body, data });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const sendPushNotificationToConsultant = async (consultantId, title, body, data = {}) => {
+  try {
+    const response = await apiClient.post('/users/consultant/send-notification', { consultantId, title, body, data });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// --- Notification API ---
+export const fetchConsultantNotifications = async () => {
+  try {
+    const response = await apiClient.get('/users/consultant/notifications');
+    console.log('Notifications: ', response.data)
+    return response.data.notifications;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const fetchUserNotifications = async () => {
+  try {
+    const response = await apiClient.get('/users/notifications');
+    return response.data.notifications;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  try {
+    await apiClient.post('/users/notification/read', { notificationId });
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const updateNotificationPreference = async (enabled) => {
+  try {
+    const res = await apiClient.patch('/users/notification-preference', { enabled });
+    return res.data;
+  } catch (error) {
+    throw error;
   }
 };
 

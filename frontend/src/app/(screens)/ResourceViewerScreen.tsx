@@ -4,7 +4,7 @@ import Slider from '@react-native-community/slider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { WebView } from 'react-native-webview';
 import { Audio } from 'expo-av';
 import { Video } from 'expo-video';
@@ -16,6 +16,7 @@ const getFileExtension = (url: string) => {
 
 const ResourceViewerScreen = () => {
   const params = useLocalSearchParams();
+  const { COLORS } = useTheme();
   // Accept url, file_url, or resource object
   let resourceUrl: string | undefined = undefined;
   let resourceTitle: string | undefined = undefined;
@@ -105,6 +106,14 @@ const ResourceViewerScreen = () => {
     );
   };
 
+  const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fafafa' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  backButton: { padding: 8, marginRight: 12 },
+  headerTitle: { fontSize: 24, fontWeight: '700', color: COLORS.textDark },
+  content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 0, margin: 0, width: '100%' },
+});
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Hide header for PDF fullscreen mode */}
@@ -184,6 +193,17 @@ const ModernAudioPlayer = ({ url, title, artist, coverArt }: { url: string, titl
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  const modernStyles = StyleSheet.create({
+  container: { alignItems: 'center', width: '100%', padding: 24 },
+  coverArt: { width: 120, height: 120, borderRadius: 12, marginBottom: 16 },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 4, color: '#222' },
+  artist: { fontSize: 16, color: '#666', marginBottom: 16 },
+  slider: { width: '100%', height: 40 },
+  timeRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  time: { fontSize: 12, color: '#888' },
+  playButton: { backgroundColor: '#007AFF', borderRadius: 32, padding: 18, marginTop: 16 },
+});
+
   return (
     <View style={modernStyles.container}>
       {coverArt && <Image source={{ uri: coverArt }} style={modernStyles.coverArt} />}
@@ -209,24 +229,5 @@ const ModernAudioPlayer = ({ url, title, artist, coverArt }: { url: string, titl
     </View>
   );
 };
-
-const modernStyles = StyleSheet.create({
-  container: { alignItems: 'center', width: '100%', padding: 24 },
-  coverArt: { width: 120, height: 120, borderRadius: 12, marginBottom: 16 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 4, color: '#222' },
-  artist: { fontSize: 16, color: '#666', marginBottom: 16 },
-  slider: { width: '100%', height: 40 },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
-  time: { fontSize: 12, color: '#888' },
-  playButton: { backgroundColor: '#007AFF', borderRadius: 32, padding: 18, marginTop: 16 },
-});
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fafafa' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  backButton: { padding: 8, marginRight: 12 },
-  headerTitle: { fontSize: 24, fontWeight: '700', color: COLORS.textDark },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 0, margin: 0, width: '100%' },
-});
 
 export default ResourceViewerScreen;

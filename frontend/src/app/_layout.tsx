@@ -5,22 +5,39 @@ import {
     ThemeProvider,
 } from "@react-navigation/native";
 import { useColorScheme } from "react-native";
-import tamaguiConfig from "../../tamagui.config"
-import { TamaguiProvider } from "tamagui";
+// import tamaguiConfig from "../../tamagui.config";
+// import { TamaguiProvider } from "tamagui";
 import { AuthProvider } from "../context/authContext";
 import { UserProvider } from "../context/userContext";
 import { ConsultantProvider } from "../context/consultantContext";
+import { ThemeProvider as CustomThemeProvider, useTheme } from '../context/ThemeContext';
+import * as Notifications from 'expo-notifications';
+
+// Set notification handler globally
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+    }),
+});
 
 export default function RootLayout() {
-    return <RootLayoutNav />;
+    return (
+        <CustomThemeProvider>
+            <RootLayoutNav />
+        </CustomThemeProvider>
+    );
 }
 
 function RootLayoutNav() {
-    const colorScheme = useColorScheme();
-
+    // Use theme from context
+    const { mode } = useTheme();
+    // Set navigation theme based on mode
+    const navTheme = mode === 'dark' ? DarkTheme : DefaultTheme;
     return (
-        <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme!}>
-        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={navTheme}>
             <AuthProvider>
                 <UserProvider>
                     <ConsultantProvider>
@@ -29,6 +46,5 @@ function RootLayoutNav() {
                 </UserProvider>
             </AuthProvider>
         </ThemeProvider>
-        </TamaguiProvider>
     );
 }

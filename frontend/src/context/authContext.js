@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { loginUser, registerUser, logoutUser, getStoredToken, getStoredUserData } from '../services/api';
+import { loginUser, registerUser, logoutUser, getStoredToken, getStoredUserData, saveUserPushToken, saveConsultantPushToken, updateNotificationPreference } from '../services/api';
+import { registerForPushNotificationsAsync } from '../services/pushNotifications';
 
 const AuthContext = createContext({});
 
@@ -47,6 +48,15 @@ export const AuthProvider = ({ children }) => {
             if (response.success) {
                 setUser(response.user);
                 setIsAuthenticated(true);
+                // Register and save push token after login
+                const pushToken = await registerForPushNotificationsAsync();
+                if (pushToken && response.user) {
+                    if (response.user.role === 'consultant') {
+                        await saveConsultantPushToken(response.user.id, pushToken);
+                    } else {
+                        await saveUserPushToken(response.user.id, pushToken);
+                    }
+                }
                 return { success: true, user: response.user }; // Return user object for immediate role-based redirect
             } else {
                 return { success: false, message: response.message };
@@ -62,6 +72,15 @@ export const AuthProvider = ({ children }) => {
             if (response.success) {
                 setUser(response.user);
                 setIsAuthenticated(true);
+                // Register and save push token after registration
+                const pushToken = await registerForPushNotificationsAsync();
+                if (pushToken && response.user) {
+                    if (response.user.role === 'consultant') {
+                        await saveConsultantPushToken(response.user.id, pushToken);
+                    } else {
+                        await saveUserPushToken(response.user.id, pushToken);
+                    }
+                }
                 return { success: true, message: response.message };
             } else {
                 return { success: false, message: response.message };
@@ -77,6 +96,15 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
     };
 
+    const updatePrivacySettings = async (settings) => {
+        // Only handle pushNotifications for now
+        if (settings.pushNotifications !== undefined && user) {
+            await updateNotificationPreference(settings.pushNotifications);
+            setUser({ ...user, pushNotifications: settings.pushNotifications });
+        }
+        // Add more settings as needed
+    };
+
     const value = {
         user,
         isAuthenticated,
@@ -85,7 +113,8 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        setUser
+        setUser,
+        updatePrivacySettings,
     };
     return (
         <AuthContext.Provider value={value}>

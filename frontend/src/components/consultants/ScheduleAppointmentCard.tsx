@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity, Pressable, TextInput } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import React, { useState, useEffect } from 'react'
 import { Picker } from '@react-native-picker/picker';
 import Modal from 'react-native-modal';
@@ -68,6 +68,7 @@ const ScheduleAppointmentCard: React.FC<ScheduleAppointmentCardProps> = ({ appoi
     const [cancelReason, setCancelReason] = useState('');
     const [newDate, setNewDate] = useState<Date>(new Date(appointment.appointment_datetime));
     const [slotsForDate, setSlotsForDate] = useState<string[]>(availableSlots);
+    const { COLORS } = useTheme();
 
     // Calendar state for modal
     const today = new Date();
@@ -129,6 +130,182 @@ const ScheduleAppointmentCard: React.FC<ScheduleAppointmentCardProps> = ({ appoi
         setCalendarYear(newYear);
         setSelectedDay(null);
     };
+
+    const styles = StyleSheet.create({
+    appointmentCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+    },
+    timeContainer: {
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    appointmentTimeBox: {
+        backgroundColor: COLORS.border,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        minWidth: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    appointmentTime: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: COLORS.textDark,
+    },
+    verticalLine: {
+        width: 2,
+        height: 40,
+        backgroundColor: COLORS.border,
+    },
+    appointmentContent: {
+        flex: 1,
+        flexDirection: 'row',
+        backgroundColor: COLORS.cardBackground,
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 8,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    patientAvatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 12,
+        marginRight: 12,
+    },
+    appointmentDetails: {
+        flex: 1,
+    },
+    patientHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    patientName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: COLORS.textDark,
+        marginRight: 8,
+    },
+    patientCondition: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        marginBottom: 8,
+    },
+    appointmentInfo: {
+        flexDirection: 'row',
+        gap: 16,
+    },
+    appointmentAction: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    appointmentActionReschedule: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        fontWeight: '500',
+        backgroundColor: COLORS.background,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4
+    },
+    appointmentActionCancel: {
+        fontSize: 14,
+        color: COLORS.error,
+        fontWeight: '500',
+        backgroundColor: COLORS.bgError,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4
+    },
+    actionButton: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+})
+
+const modalStyles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalBox: {
+        backgroundColor: COLORS.cardBackground,
+        borderRadius: 16,
+        padding: 24,
+        width: 320,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        marginBottom: 12,
+        color: COLORS.textDark,
+    },
+    modalLabel: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        marginBottom: 8,
+    },
+    pickerWrapper: {
+        borderWidth: 1,
+        borderColor: COLORS.lightGrey,
+        borderRadius: 8,
+        marginBottom: 16,
+        backgroundColor: COLORS.background,
+    },
+    picker: {
+        height: 50,
+        width: '100%',
+        color: COLORS.textDark,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 12,
+    },
+    cancelBtn: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: COLORS.lightGrey,
+    },
+    cancelText: {
+        color: COLORS.textSecondary,
+        fontWeight: '500',
+    },
+    confirmBtn: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: COLORS.primary,
+    },
+    confirmText: {
+        color: COLORS.white,
+        fontWeight: '600',
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: COLORS.lightGrey,
+        borderRadius: 8,
+        padding: 10,
+        fontSize: 16,
+        marginBottom: 16,
+        color: COLORS.textDark,
+        backgroundColor: COLORS.background,
+        minHeight: 44,
+    },
+});
 
     return (
         <View key={appointment.id} style={styles.appointmentCard}>
@@ -276,181 +453,5 @@ const ScheduleAppointmentCard: React.FC<ScheduleAppointmentCardProps> = ({ appoi
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    appointmentCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-    },
-    timeContainer: {
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    appointmentTimeBox: {
-        backgroundColor: COLORS.lightGrey,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
-        minWidth: 60,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    appointmentTime: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: COLORS.textDark,
-    },
-    verticalLine: {
-        width: 2,
-        height: 40,
-        backgroundColor: COLORS.lightGrey,
-    },
-    appointmentContent: {
-        flex: 1,
-        flexDirection: 'row',
-        backgroundColor: COLORS.cardBackground,
-        borderRadius: 16,
-        paddingVertical: 16,
-        paddingHorizontal: 8,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: COLORS.lightGrey,
-    },
-    patientAvatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
-        marginRight: 12,
-    },
-    appointmentDetails: {
-        flex: 1,
-    },
-    patientHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    patientName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: COLORS.textDark,
-        marginRight: 8,
-    },
-    patientCondition: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        marginBottom: 8,
-    },
-    appointmentInfo: {
-        flexDirection: 'row',
-        gap: 16,
-    },
-    appointmentAction: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    appointmentActionReschedule: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        fontWeight: '500',
-        backgroundColor: COLORS.background,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4
-    },
-    appointmentActionCancel: {
-        fontSize: 14,
-        color: COLORS.error,
-        fontWeight: '500',
-        backgroundColor: COLORS.bgError,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4
-    },
-    actionButton: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-})
-
-const modalStyles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalBox: {
-        backgroundColor: COLORS.cardBackground,
-        borderRadius: 16,
-        padding: 24,
-        width: 320,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        marginBottom: 12,
-        color: COLORS.textDark,
-    },
-    modalLabel: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        marginBottom: 8,
-    },
-    pickerWrapper: {
-        borderWidth: 1,
-        borderColor: COLORS.lightGrey,
-        borderRadius: 8,
-        marginBottom: 16,
-        backgroundColor: COLORS.background,
-    },
-    picker: {
-        height: 50,
-        width: '100%',
-        color: COLORS.textDark,
-    },
-    modalActions: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        gap: 12,
-    },
-    cancelBtn: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        backgroundColor: COLORS.lightGrey,
-    },
-    cancelText: {
-        color: COLORS.textSecondary,
-        fontWeight: '500',
-    },
-    confirmBtn: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        backgroundColor: COLORS.primary,
-    },
-    confirmText: {
-        color: COLORS.white,
-        fontWeight: '600',
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: COLORS.lightGrey,
-        borderRadius: 8,
-        padding: 10,
-        fontSize: 16,
-        marginBottom: 16,
-        color: COLORS.textDark,
-        backgroundColor: COLORS.background,
-        minHeight: 44,
-    },
-});
 
 export default ScheduleAppointmentCard;

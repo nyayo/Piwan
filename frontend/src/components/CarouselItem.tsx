@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ImageBackground }
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useCallback, useState } from 'react'
 import { DataType } from '../data/card-data';
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -16,6 +16,7 @@ const CarouselItem = ({ item, index, setUpcomingEvents } : CarouselItem) => {
     const handleRemoveEvent = useCallback((eventId: number) => {
         setUpcomingEvents(prev => prev.filter(e => e.id !== eventId));
     }, []);
+    const { COLORS } = useTheme();
 
     const truncateWords = (text: string, maxWords = 5) => {
         const words = text.split(' ');

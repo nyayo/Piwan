@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../../../constants/theme';
+import { useTheme } from '../../../context/ThemeContext';
 import { useAuth } from '../../../context/authContext';
 import { StatusBar } from 'expo-status-bar';
 import * as DocumentPicker from 'expo-document-picker';
@@ -41,6 +41,7 @@ type ImageAsset = {
 
 export default function MediaLibraryScreen() {
   const { user } = useAuth();
+  const { COLORS } = useTheme();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('all');
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -395,313 +396,7 @@ export default function MediaLibraryScreen() {
     </TouchableOpacity>
   );
 
-  return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Media Library</Text>
-        <TouchableOpacity onPress={handleUpload} style={styles.uploadButton}>
-          <Ionicons name="add" size={24} color={COLORS.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats Overview */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{mediaItems.length}</Text>
-          <Text style={styles.statLabel}>Total Resources</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {mediaItems.reduce((sum, item) => sum + item.downloads, 0)}
-          </Text>
-          <Text style={styles.statLabel}>Total Downloads</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>4.8</Text>
-          <Text style={styles.statLabel}>Avg. Rating</Text>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsContainer}
-        contentContainerStyle={styles.tabsContent}
-      >
-        {tabs.map(renderTab)}
-      </ScrollView>
-
-      {/* Media Grid */}
-      <View style={{ flex: 1}}>
-        {isLoading ? (
-          // Skeleton loader (simple version)
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={{ marginTop: 16, color: COLORS.textSecondary }}>Loading resources...</Text>
-            <View style={{ flexDirection: 'row', marginTop: 32 }}>
-              {[1,2].map((_, idx) => (
-                <View key={idx} style={{
-                  width: (width - 50) / 2,
-                  height: 180,
-                  backgroundColor: COLORS.lightGrey,
-                  borderRadius: 12,
-                  marginHorizontal: 8,
-                  opacity: 0.4
-                }} />
-              ))}
-            </View>
-          </View>
-        ) : filteredItems.length === 0 ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textSecondary} style={{ marginBottom: 12 }} />
-            <Text style={{ color: COLORS.textSecondary, fontSize: 16, textAlign: 'center' }}>
-              No resources found.
-            </Text>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 13, marginTop: 4, textAlign: 'center' }}>
-              Try uploading a new resource or check back later.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            ref={scrollViewRef}
-            data={filteredItems}
-            renderItem={renderMediaItem}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.row}
-            contentContainerStyle={styles.mediaGrid}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </View>
-
-      {/* Upload Modal */}
-      <Modal
-        visible={showUploadModal}
-        transparent={true}
-        animationType="none"
-        onRequestClose={closeModal}
-      >
-        <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-          <Animated.View 
-            style={[
-              styles.modalContent,
-              {
-                transform: [{
-                  scale: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.9, 1],
-                  })
-                }]
-              }
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Upload Resource</Text>
-              <TouchableOpacity onPress={closeModal}>
-                <Ionicons name="close" size={24} color={COLORS.textDark} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-              {/* Title Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Title *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter resource title"
-                  value={formData.title}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, title: text }))}
-                  maxLength={100}
-                />
-              </View>
-
-              {/* Description Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Description *</Text>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  placeholder="Enter a brief description"
-                  value={formData.description}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
-                  multiline={true}
-                  numberOfLines={3}
-                  maxLength={500}
-                />
-              </View>
-
-              {/* Category Dropdown */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Category *</Text>
-                <TouchableOpacity
-                  style={styles.dropdown}
-                  onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                >
-                  <Text style={[
-                    styles.dropdownText,
-                    !formData.category && styles.placeholderText
-                  ]}>
-                    {formData.category || 'Select a category'}
-                  </Text>
-                  <Ionicons 
-                    name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
-                    size={20} 
-                    color={COLORS.textSecondary} 
-                  />
-                </TouchableOpacity>
-                
-                {showCategoryDropdown && (
-                  <View style={styles.dropdownList}>
-                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled={true}>
-                      {categories.map((category, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            setFormData(prev => ({ ...prev, category }));
-                            setShowCategoryDropdown(false);
-                          }}
-                        >
-                          <Text style={styles.dropdownItemText}>{category}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-              {/* Preview Image */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Preview Image</Text>
-                <TouchableOpacity
-                  style={styles.imageSelector}
-                  onPress={handleSelectPreviewImage}
-                >
-                  {formData.previewImage ? (
-                    <View style={styles.selectedImageContainer}>
-                      <Image 
-                        source={{ uri: formData.previewImage.uri }} 
-                        style={styles.selectedImage} 
-                      />
-                      <View style={styles.imageOverlay}>
-                        <Ionicons name="camera" size={20} color={COLORS.white} />
-                      </View>
-                    </View>
-                  ) : (
-                    <View style={styles.imagePlaceholder}>
-                      <Ionicons name="image-outline" size={32} color={COLORS.textSecondary} />
-                      <Text style={styles.imagePlaceholderText}>Tap to select image</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* File Selection */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Select File *</Text>
-                {formData.file ? (
-                  <View style={styles.selectedFile}>
-                    <Ionicons name="document" size={20} color={COLORS.primary} />
-                    <Text style={styles.selectedFileName}>{formData.file.name}</Text>
-                    <TouchableOpacity
-                      onPress={() => setFormData(prev => ({ ...prev, file: null, type: '' }))}
-                    >
-                      <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.fileOptions}>
-                    <TouchableOpacity 
-                      style={styles.fileOption}
-                      onPress={() => handleFileUpload('book')}
-                    >
-                      <Ionicons name="book-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Book</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.fileOption}
-                      onPress={() => handleFileUpload('article')}
-                    >
-                      <Ionicons name="document-text-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Article</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.fileOption}
-                      onPress={() => handleFileUpload('music')}
-                    >
-                      <Ionicons name="musical-notes-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Music</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.fileOption}
-                      onPress={() => handleFileUpload('audio')}
-                    >
-                      <Ionicons name="headset-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Audio</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.fileOption}
-                      onPress={() => handleFileUpload('podcast')}
-                    >
-                      <Ionicons name="mic-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Podcast</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.fileOption}
-                      onPress={() => handleFileUpload('routine')}
-                    >
-                      <Ionicons name="repeat-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Routine</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.fileOption}
-                      onPress={() => handleFileUpload('video')}
-                    >
-                      <Ionicons name="videocam-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Video</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.fileOption}
-                      onPress={() => handleFileUpload('image')}
-                    >
-                      <Ionicons name="image-outline" size={24} color={COLORS.primary} />
-                      <Text style={styles.fileOptionText}>Image</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </ScrollView>
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitButton, isUploading && styles.submitButtonDisabled]}
-              onPress={handleSubmitUpload}
-              disabled={isUploading}
-            >
-              {isUploading ? (
-                <Text style={styles.submitButtonText}>Uploading...</Text>
-              ) : (
-                <>
-                  <Ionicons name="cloud-upload-outline" size={20} color={COLORS.white} />
-                  <Text style={styles.submitButtonText}>Upload Resource</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
@@ -1042,3 +737,309 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
 });
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Media Library</Text>
+        <TouchableOpacity onPress={handleUpload} style={styles.uploadButton}>
+          <Ionicons name="add" size={24} color={COLORS.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Stats Overview */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{mediaItems.length}</Text>
+          <Text style={styles.statLabel}>Total Resources</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>
+            {mediaItems.reduce((sum, item) => sum + item.downloads, 0)}
+          </Text>
+          <Text style={styles.statLabel}>Total Downloads</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>4.8</Text>
+          <Text style={styles.statLabel}>Avg. Rating</Text>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsContainer}
+        contentContainerStyle={styles.tabsContent}
+      >
+        {tabs.map(renderTab)}
+      </ScrollView>
+
+      {/* Media Grid */}
+      <View style={{ flex: 1}}>
+        {isLoading ? (
+          // Skeleton loader (simple version)
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={{ marginTop: 16, color: COLORS.textSecondary }}>Loading resources...</Text>
+            <View style={{ flexDirection: 'row', marginTop: 32 }}>
+              {[1,2].map((_, idx) => (
+                <View key={idx} style={{
+                  width: (width - 50) / 2,
+                  height: 180,
+                  backgroundColor: COLORS.lightGrey,
+                  borderRadius: 12,
+                  marginHorizontal: 8,
+                  opacity: 0.4
+                }} />
+              ))}
+            </View>
+          </View>
+        ) : filteredItems.length === 0 ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textSecondary} style={{ marginBottom: 12 }} />
+            <Text style={{ color: COLORS.textSecondary, fontSize: 16, textAlign: 'center' }}>
+              No resources found.
+            </Text>
+            <Text style={{ color: COLORS.textSecondary, fontSize: 13, marginTop: 4, textAlign: 'center' }}>
+              Try uploading a new resource or check back later.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={scrollViewRef}
+            data={filteredItems}
+            renderItem={renderMediaItem}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            contentContainerStyle={styles.mediaGrid}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
+
+      {/* Upload Modal */}
+      <Modal
+        visible={showUploadModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={closeModal}
+      >
+        <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+          <Animated.View 
+            style={[
+              styles.modalContent,
+              {
+                transform: [{
+                  scale: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.9, 1],
+                  })
+                }]
+              }
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Upload Resource</Text>
+              <TouchableOpacity onPress={closeModal}>
+                <Ionicons name="close" size={24} color={COLORS.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+              {/* Title Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Title *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter resource title"
+                  value={formData.title}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, title: text }))}
+                  maxLength={100}
+                />
+              </View>
+
+              {/* Description Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description *</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  placeholder="Enter a brief description"
+                  value={formData.description}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
+                  multiline={true}
+                  numberOfLines={3}
+                  maxLength={500}
+                />
+              </View>
+
+              {/* Category Dropdown */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Category *</Text>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                >
+                  <Text style={[
+                    styles.dropdownText,
+                    !formData.category && styles.placeholderText
+                  ]}>
+                    {formData.category || 'Select a category'}
+                  </Text>
+                  <Ionicons 
+                    name={showCategoryDropdown ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color={COLORS.textSecondary} 
+                  />
+                </TouchableOpacity>
+                
+                {showCategoryDropdown && (
+                  <View style={styles.dropdownList}>
+                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled={true}>
+                      {categories.map((category, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setFormData(prev => ({ ...prev, category }));
+                            setShowCategoryDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.dropdownItemText}>{category}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              {/* Preview Image */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Preview Image</Text>
+                <TouchableOpacity
+                  style={styles.imageSelector}
+                  onPress={handleSelectPreviewImage}
+                >
+                  {formData.previewImage ? (
+                    <View style={styles.selectedImageContainer}>
+                      <Image 
+                        source={{ uri: formData.previewImage.uri }} 
+                        style={styles.selectedImage} 
+                      />
+                      <View style={styles.imageOverlay}>
+                        <Ionicons name="camera" size={20} color={COLORS.white} />
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Ionicons name="image-outline" size={32} color={COLORS.textSecondary} />
+                      <Text style={styles.imagePlaceholderText}>Tap to select image</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* File Selection */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Select File *</Text>
+                {formData.file ? (
+                  <View style={styles.selectedFile}>
+                    <Ionicons name="document" size={20} color={COLORS.primary} />
+                    <Text style={styles.selectedFileName}>{formData.file.name}</Text>
+                    <TouchableOpacity
+                      onPress={() => setFormData(prev => ({ ...prev, file: null, type: '' }))}
+                    >
+                      <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.fileOptions}>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('book')}
+                    >
+                      <Ionicons name="book-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Book</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('article')}
+                    >
+                      <Ionicons name="document-text-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Article</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('music')}
+                    >
+                      <Ionicons name="musical-notes-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Music</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('audio')}
+                    >
+                      <Ionicons name="headset-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Audio</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('podcast')}
+                    >
+                      <Ionicons name="mic-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Podcast</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('routine')}
+                    >
+                      <Ionicons name="repeat-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Routine</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('video')}
+                    >
+                      <Ionicons name="videocam-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Video</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fileOption}
+                      onPress={() => handleFileUpload('image')}
+                    >
+                      <Ionicons name="image-outline" size={24} color={COLORS.primary} />
+                      <Text style={styles.fileOptionText}>Image</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.submitButton, isUploading && styles.submitButtonDisabled]}
+              onPress={handleSubmitUpload}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <Text style={styles.submitButtonText}>Uploading...</Text>
+              ) : (
+                <>
+                  <Ionicons name="cloud-upload-outline" size={20} color={COLORS.white} />
+                  <Text style={styles.submitButtonText}>Upload Resource</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+    </View>
+  );
+}

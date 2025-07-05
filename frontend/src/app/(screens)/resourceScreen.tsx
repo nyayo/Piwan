@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { router } from 'expo-router';
 import { fetchResources } from '../../services/api';
 
@@ -88,6 +88,7 @@ const Resources = () => {
     const [resources, setResources] = useState<Resource[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const { COLORS } = useTheme();
 
     useEffect(() => {
         const loadResources = async () => {
@@ -122,100 +123,7 @@ const Resources = () => {
         }
     };
 
-    const renderItem = ({ item }: { item: typeof resourcesMeta[number] }) => {
-        if (item.isApplyCard) {
-        return (
-            <TouchableOpacity
-            style={[styles.card, styles.applyCard]}
-            onPress={() => {
-                // TODO: Navigate to application form
-            }}
-            >
-            <LinearGradient
-                colors={item.gradient}
-                style={styles.applyGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
-                <View style={styles.applyContent}>
-                <Text style={styles.applyIcon}>{item.icon}</Text>
-                <Text style={styles.applyTitle}>{item.title}</Text>
-                <Text style={styles.applyDescription}>{item.description}</Text>
-                <View style={styles.applyButton}>
-                    <Text style={styles.applyButtonText}>Get Started</Text>
-                </View>
-                </View>
-            </LinearGradient>
-            </TouchableOpacity>
-        );
-        }
-        return (
-        <TouchableOpacity
-            style={styles.card}
-            onPress={() => handleCategoryPress(item.id as keyof typeof CATEGORY_MAP)}
-        >
-            <View style={styles.cardHeader}>
-            <View style={[styles.iconContainer, { backgroundColor: item.gradient[0] + '20' }]}>
-                <Text style={styles.cardIcon}>{item.icon}</Text>
-            </View>
-            </View>
-            <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardDescription} numberOfLines={3}>
-                {item.description}
-            </Text>
-            </View>
-            <View style={styles.footer}>
-            <LinearGradient
-                colors={item.gradient}
-                style={styles.gradientBorder}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-            />
-            </View>
-        </TouchableOpacity>
-        );
-    };
-
-    return (
-        <SafeAreaView style={styles.container}>
-        <View style={styles.headerContainer}>
-            <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            >
-            <Ionicons name="arrow-back" size={24} color={COLORS.textDark || '#333'} />
-            </TouchableOpacity>
-            <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Resources</Text>
-            <Text style={styles.headerSubtitle}>Discover tools for your wellness journey</Text>
-            </View>
-        </View>
-        {loading ? (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={COLORS.primary || '#667eea'} />
-            </View>
-        ) : error ? (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ color: 'red' }}>{error}</Text>
-            </View>
-        ) : (
-            <FlatList
-            data={resourcesMeta}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.cardRow}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            />
-        )}
-        <StatusBar style="dark" />
-        </SafeAreaView>
-    );
-};
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
 container: {
     flex: 1,
     backgroundColor: '#fafafa',
@@ -352,5 +260,98 @@ applyButtonText: {
     textAlign:'center',
 },
 });
+
+    const renderItem = ({ item }: { item: typeof resourcesMeta[number] }) => {
+        if (item.isApplyCard) {
+        return (
+            <TouchableOpacity
+            style={[styles.card, styles.applyCard]}
+            onPress={() => {
+                // TODO: Navigate to application form
+            }}
+            >
+            <LinearGradient
+                colors={item.gradient}
+                style={styles.applyGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                <View style={styles.applyContent}>
+                <Text style={styles.applyIcon}>{item.icon}</Text>
+                <Text style={styles.applyTitle}>{item.title}</Text>
+                <Text style={styles.applyDescription}>{item.description}</Text>
+                <View style={styles.applyButton}>
+                    <Text style={styles.applyButtonText}>Get Started</Text>
+                </View>
+                </View>
+            </LinearGradient>
+            </TouchableOpacity>
+        );
+        }
+        return (
+        <TouchableOpacity
+            style={styles.card}
+            onPress={() => handleCategoryPress(item.id as keyof typeof CATEGORY_MAP)}
+        >
+            <View style={styles.cardHeader}>
+            <View style={[styles.iconContainer, { backgroundColor: item.gradient[0] + '20' }]}>
+                <Text style={styles.cardIcon}>{item.icon}</Text>
+            </View>
+            </View>
+            <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.cardDescription} numberOfLines={3}>
+                {item.description}
+            </Text>
+            </View>
+            <View style={styles.footer}>
+            <LinearGradient
+                colors={item.gradient}
+                style={styles.gradientBorder}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+            />
+            </View>
+        </TouchableOpacity>
+        );
+    };
+
+    return (
+        <SafeAreaView style={styles.container}>
+        <View style={styles.headerContainer}>
+            <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            >
+            <Ionicons name="arrow-back" size={24} color={COLORS.textDark || '#333'} />
+            </TouchableOpacity>
+            <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Resources</Text>
+            <Text style={styles.headerSubtitle}>Discover tools for your wellness journey</Text>
+            </View>
+        </View>
+        {loading ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={COLORS.primary || '#667eea'} />
+            </View>
+        ) : error ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: 'red' }}>{error}</Text>
+            </View>
+        ) : (
+            <FlatList
+            data={resourcesMeta}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={styles.cardRow}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            />
+        )}
+        <StatusBar style="dark" />
+        </SafeAreaView>
+    );
+};
 
 export default Resources;

@@ -1,6 +1,7 @@
 import { pool } from "../config/db.js"
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { sendPushNotificationAsync } from './NotificationService.js';
 
 export const registerUser = async(user) => {
     try {
@@ -148,4 +149,17 @@ export const changePasswordForAnyRole = async (userId, role, currentPassword, ne
     } catch (error) {
         return { success: false, message: 'Password change failed.' };
     }
+};
+
+export const saveAuthPushToken = async (authId, pushToken) => {
+    const query = 'UPDATE admin SET push_token = ? WHERE id = ?';
+    await pool.query(query, [pushToken, authId]);
+};
+
+export const sendPushNotificationToAuth = async (authId, title, body, data) => {
+    const [rows] = await pool.query('SELECT push_token FROM admin WHERE id = ?', [authId]);
+    if (!rows.length || !rows[0].push_token) {
+        throw new Error('Admin push token not found');
+    }
+    return await sendPushNotificationAsync(rows[0].push_token, title, body, data);
 };

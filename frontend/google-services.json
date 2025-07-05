@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "972266311538",
+    "project_id": "piwan-44ee8",
+    "storage_bucket": "piwan-44ee8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:972266311538:android:e146e364fccb82d98fd7eb",
+        "android_client_info": {
+          "package_name": "com.nyayo.frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmTBithn-wTesIdBIFwYAWMxkCH69VI6Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

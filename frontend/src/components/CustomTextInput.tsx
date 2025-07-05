@@ -1,6 +1,7 @@
 import { View, Text, TextInput, StyleSheet, StyleProp, ViewStyle } from 'react-native'
 import React, { ComponentProps, useState } from 'react'
 import { useController } from 'react-hook-form';
+import { useTheme } from '../context/ThemeContext';
 
 type CustomTextInput = {
     label?: string;
@@ -15,6 +16,7 @@ const CustomTextInput = ({ label, containerStyle, focusStyle, name, ...textInput
         name, 
         rules: { required: `${name} is required`}
     });
+    const {COLORS} = useTheme();
 
     const handleFocus = (e: any) => {
         setIsFocused(true);

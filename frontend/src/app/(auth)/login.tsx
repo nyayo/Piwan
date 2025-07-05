@@ -5,7 +5,7 @@ import { useForm, FormProvider, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import CustomTextInput from '../../components/CustomTextInput';
 import KeyboardAwareScrollView from '../../components/KeyboardAwareView';
 import { useAuth } from '../../context/authContext';
@@ -20,6 +20,7 @@ const LoginInfo = z.object({
 type LoginScreen = z.infer<typeof LoginInfo>; 
 
 const LoginScreen = () => {
+    const {COLORS} = useTheme();
     const [loading, setLoading] = useState(false)
     const { login } = useAuth();
     const router = useRouter();
@@ -59,63 +60,7 @@ const LoginScreen = () => {
         router.push("/signup");
     }
 
-    return (
-        <KeyboardAwareScrollView>
-            <FormProvider {...form}>
-                <View style={styles.illustrationContainer}>
-                    <Image 
-                        source={require("../../assets/logo.png")}
-                        style={styles.illustration}
-                        resizeMode='cover'
-                    />
-                </View>
-                <View style={styles.loginSection}>
-                    <CustomTextInput 
-                        placeholder='email@example.com' 
-                        name='email' 
-                        label='Email' 
-                        containerStyle={styles.inputContainer}
-                        style={styles.textInput}
-                        focusStyle={styles.textInputFocused}
-                    />
-                    <CustomTextInput 
-                        placeholder='Password' 
-                        name='password' 
-                        label='Password' 
-                        secureTextEntry
-                        containerStyle={styles.inputContainer}
-                        style={styles.textInput}
-                        focusStyle={styles.textInputFocused}
-                    />
-                    <TouchableOpacity
-                        style={styles.loginButton}
-                        onPress={form.handleSubmit(handleLogin)}
-                        activeOpacity={0.9}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.loginButtonText}>Sign In</Text>
-                        )}
-                    </TouchableOpacity>
-                    
-                    <View style={styles.signUpSection}>
-                        <Text style={styles.signUpText}>Don't have an account? </Text>
-                        <TouchableOpacity onPress={handleSignUpPress}>
-                            <Text style={styles.signUpLink}>Sign up</Text>
-                        </TouchableOpacity>
-                    </View>
-                    
-                    <Text style={styles.termsText}>
-                        By continuing, you agree to our Terms and Privacy Policy
-                    </Text>
-                </View>
-            </FormProvider>
-        </KeyboardAwareScrollView>
-    );
-}
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     illustrationContainer: {
         flex: 1,
         justifyContent: "center",
@@ -205,5 +150,61 @@ const styles = StyleSheet.create({
         lineHeight: 16,
     },
 });
+
+    return (
+        <KeyboardAwareScrollView>
+            <FormProvider {...form}>
+                <View style={styles.illustrationContainer}>
+                    <Image 
+                        source={require("../../assets/logo.png")}
+                        style={styles.illustration}
+                        resizeMode='cover'
+                    />
+                </View>
+                <View style={styles.loginSection}>
+                    <CustomTextInput 
+                        placeholder='email@example.com' 
+                        name='email' 
+                        label='Email' 
+                        containerStyle={styles.inputContainer}
+                        style={styles.textInput}
+                        focusStyle={styles.textInputFocused}
+                    />
+                    <CustomTextInput 
+                        placeholder='Password' 
+                        name='password' 
+                        label='Password' 
+                        secureTextEntry
+                        containerStyle={styles.inputContainer}
+                        style={styles.textInput}
+                        focusStyle={styles.textInputFocused}
+                    />
+                    <TouchableOpacity
+                        style={styles.loginButton}
+                        onPress={form.handleSubmit(handleLogin)}
+                        activeOpacity={0.9}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.loginButtonText}>Sign In</Text>
+                        )}
+                    </TouchableOpacity>
+                    
+                    <View style={styles.signUpSection}>
+                        <Text style={styles.signUpText}>Don't have an account? </Text>
+                        <TouchableOpacity onPress={handleSignUpPress}>
+                            <Text style={styles.signUpLink}>Sign up</Text>
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <Text style={styles.termsText}>
+                        By continuing, you agree to our Terms and Privacy Policy
+                    </Text>
+                </View>
+            </FormProvider>
+        </KeyboardAwareScrollView>
+    );
+}
 
 export default LoginScreen;

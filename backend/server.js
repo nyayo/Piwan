@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { checkConnection } from './config/db.js';
 import { createAllTables } from './utils/DButils.js';
 import authRoutes from './routes/authRoutes.js';
@@ -9,7 +10,7 @@ import activityRoutes from './routes/activityRoutes.js';
 import cloudinarySignatureRouter from './routes/cloudinarySignature.js';
 import moodRoutes from './routes/moodRoutes.js';
 import resourceRoutes from './routes/resourceRoutes.js'
-import cors from 'cors';
+import './jobs/reminderJob.js';
 
 const app = express();
 app.use(cors()); 

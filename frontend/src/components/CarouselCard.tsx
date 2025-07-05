@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, Modal, TextInput, Alert } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons';
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { convertToLocalDate, formatTime, toLocalDateTimeString } from '../helper/convertDateTime';
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -27,6 +27,7 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancellationReason, setCancellationReason] = useState('');
     const [isChatActive, setIsChatActive] = useState(false);
+    const { COLORS } = useTheme();
 
     // Check if chat should be active based on appointment time
     useEffect(() => {
@@ -83,122 +84,7 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
 
     const isConfirmed = appointment.status === 'confirmed';
 
-    return (
-        <>
-            <View style={styles.carouselCard}>
-                <View style={styles.cardHeader}>
-                    <View style={styles.statusBadge}>
-                        <Text style={styles.statusText}>
-                            {isConfirmed ? 'CONFIRMED' : 'PENDING'}
-                        </Text>
-                    </View>
-                    <Text style={styles.location}>{appointment.location}</Text>
-                </View>
-                
-                <View style={styles.dateTimeContainer}>
-                    <Text style={styles.appointmentDate}>{convertToLocalDate(appointment.appointment_datetime || appointment.appointment_date)}</Text>
-                    <Text style={styles.appointmentTime}>{formatTime(appointment.appointment_datetime || appointment.appointment_time)}</Text>
-                </View>
-                
-                <View style={styles.doctorSection}> 
-                    <Image source={{ uri: appointment.profile_image }} style={styles.doctorAvatar} />
-                    <View style={styles.doctorInfo}>
-                        <Text style={styles.doctorName}>{appointment.consultant_name}</Text>
-                        <Text style={styles.specialty}>{appointment.profession}</Text>
-                    </View>
-                </View>
-                
-                {/* Action Buttons */}
-                <View style={styles.actionButtonsContainer}>
-                    {isConfirmed && (
-                        <TouchableOpacity 
-                            style={[
-                                styles.chatButton,
-                                isChatActive ? styles.chatButtonActive : styles.chatButtonInactive
-                            ]}
-                            onPress={handleChatPress}
-                        >
-                            <Ionicons 
-                                name="chatbubble-outline" 
-                                size={16} 
-                                color={isChatActive ? COLORS.white : COLORS.textLight} 
-                            />
-                            <Text style={[
-                                styles.chatButtonText,
-                                isChatActive ? styles.chatButtonTextActive : styles.chatButtonTextInactive
-                            ]}>
-                                {isChatActive ? 'Start Chat' : 'Chat Soon'}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                    
-                    <TouchableOpacity 
-                        style={[
-                            styles.cancelButton,
-                            isConfirmed ? { flex: 1 } : { flex: 1 }
-                        ]}
-                        onPress={handleCancelPress}
-                    >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                        <Ionicons name="close-circle-outline" size={16} color={COLORS.white} />
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* Custom Cancel Modal */}
-            <Modal
-                visible={showCancelModal}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={handleModalClose}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Cancel Appointment</Text>
-                            <TouchableOpacity onPress={handleModalClose}>
-                                <Ionicons name="close" size={24} color={COLORS.textDark} />
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <Text style={styles.modalSubtitle}>
-                            Please provide a reason for cancelling your appointment with {appointment.consultant_name}
-                        </Text>
-                        
-                        <TextInput
-                            style={styles.reasonInput}
-                            placeholder="Enter reason for cancellation..."
-                            placeholderTextColor={COLORS.textLight}
-                            value={cancellationReason}
-                            onChangeText={setCancellationReason}
-                            multiline={true}
-                            numberOfLines={4}
-                            textAlignVertical="top"
-                        />
-                        
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity 
-                                style={styles.modalCancelButton}
-                                onPress={handleModalClose}
-                            >
-                                <Text style={styles.modalCancelButtonText}>Keep Appointment</Text>
-                            </TouchableOpacity>
-                            
-                            <TouchableOpacity 
-                                style={styles.modalConfirmButton}
-                                onPress={handleConfirmCancel}
-                            >
-                                <Text style={styles.modalConfirmButtonText}>Confirm Cancel</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-        </>
-    );
-}
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     carouselCard: {
         backgroundColor: COLORS.textDark,
         borderRadius: 20,
@@ -392,5 +278,120 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 })
+
+    return (
+        <>
+            <View style={styles.carouselCard}>
+                <View style={styles.cardHeader}>
+                    <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>
+                            {isConfirmed ? 'CONFIRMED' : 'PENDING'}
+                        </Text>
+                    </View>
+                    <Text style={styles.location}>{appointment.location}</Text>
+                </View>
+                
+                <View style={styles.dateTimeContainer}>
+                    <Text style={styles.appointmentDate}>{convertToLocalDate(appointment.appointment_datetime || appointment.appointment_date)}</Text>
+                    <Text style={styles.appointmentTime}>{formatTime(appointment.appointment_datetime || appointment.appointment_time)}</Text>
+                </View>
+                
+                <View style={styles.doctorSection}> 
+                    <Image source={{ uri: appointment.profile_image }} style={styles.doctorAvatar} />
+                    <View style={styles.doctorInfo}>
+                        <Text style={styles.doctorName}>{appointment.consultant_name}</Text>
+                        <Text style={styles.specialty}>{appointment.profession}</Text>
+                    </View>
+                </View>
+                
+                {/* Action Buttons */}
+                <View style={styles.actionButtonsContainer}>
+                    {isConfirmed && (
+                        <TouchableOpacity 
+                            style={[
+                                styles.chatButton,
+                                isChatActive ? styles.chatButtonActive : styles.chatButtonInactive
+                            ]}
+                            onPress={handleChatPress}
+                        >
+                            <Ionicons 
+                                name="chatbubble-outline" 
+                                size={16} 
+                                color={isChatActive ? COLORS.white : COLORS.textLight} 
+                            />
+                            <Text style={[
+                                styles.chatButtonText,
+                                isChatActive ? styles.chatButtonTextActive : styles.chatButtonTextInactive
+                            ]}>
+                                {isChatActive ? 'Start Chat' : 'Chat Soon'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                    
+                    <TouchableOpacity 
+                        style={[
+                            styles.cancelButton,
+                            isConfirmed ? { flex: 1 } : { flex: 1 }
+                        ]}
+                        onPress={handleCancelPress}
+                    >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <Ionicons name="close-circle-outline" size={16} color={COLORS.white} />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Custom Cancel Modal */}
+            <Modal
+                visible={showCancelModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={handleModalClose}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Cancel Appointment</Text>
+                            <TouchableOpacity onPress={handleModalClose}>
+                                <Ionicons name="close" size={24} color={COLORS.textDark} />
+                            </TouchableOpacity>
+                        </View>
+                        
+                        <Text style={styles.modalSubtitle}>
+                            Please provide a reason for cancelling your appointment with {appointment.consultant_name}
+                        </Text>
+                        
+                        <TextInput
+                            style={styles.reasonInput}
+                            placeholder="Enter reason for cancellation..."
+                            placeholderTextColor={COLORS.textLight}
+                            value={cancellationReason}
+                            onChangeText={setCancellationReason}
+                            multiline={true}
+                            numberOfLines={4}
+                            textAlignVertical="top"
+                        />
+                        
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity 
+                                style={styles.modalCancelButton}
+                                onPress={handleModalClose}
+                            >
+                                <Text style={styles.modalCancelButtonText}>Keep Appointment</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity 
+                                style={styles.modalConfirmButton}
+                                onPress={handleConfirmCancel}
+                            >
+                                <Text style={styles.modalConfirmButtonText}>Confirm Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </>
+    );
+}
 
 export default CarouselCard;

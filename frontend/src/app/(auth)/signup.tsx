@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 import KeyboardAwareScrollView from '../../components/KeyboardAwareView';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import CustomTextInput from '../../components/CustomTextInput';
 import { useAuth } from '../../context/authContext';
 
@@ -32,6 +32,7 @@ type SiginupScreen = z.infer<typeof SignUpInfo>;
 const SiginupScreen = () => {
     const [loading, setLoading] = useState(false)
     const { register } = useAuth();
+    const {COLORS} = useTheme();
     const router = useRouter();
     const form = useForm<SiginupScreen>({
         resolver: zodResolver(SignUpInfo),
@@ -64,80 +65,7 @@ const SiginupScreen = () => {
         router.push("/login"); 
     }
 
-    return (
-        <KeyboardAwareScrollView>
-            <FormProvider {...form}>
-                <View style={styles.illustrationContainer}>
-                    <Image 
-                        source={require("../../assets/logo.png")}
-                        style={styles.illustration}
-                        resizeMode='cover'
-                    />
-                </View>
-                <View style={styles.loginSection}>
-                    <CustomTextInput 
-                        placeholder='John Don' 
-                        name='username' 
-                        label='Username' 
-                        containerStyle={styles.inputContainer}
-                        style={styles.textInput}
-                        focusStyle={styles.textInputFocused}
-                    />
-                    <CustomTextInput 
-                        placeholder='email@example.com' 
-                        name='email' 
-                        label='Email' 
-                        containerStyle={styles.inputContainer}
-                        style={styles.textInput}
-                        focusStyle={styles.textInputFocused}
-                    />
-                    <CustomTextInput 
-                        placeholder='Password' 
-                        name='password' 
-                        label='Password' 
-                        secureTextEntry
-                        containerStyle={styles.inputContainer}
-                        style={styles.textInput}
-                        focusStyle={styles.textInputFocused}
-                    />
-                    <CustomTextInput 
-                        placeholder='Confirm Password' 
-                        name='confirmPassword' 
-                        label='Confirm Password' 
-                        secureTextEntry
-                        containerStyle={styles.inputContainer}
-                        style={styles.textInput}
-                        focusStyle={styles.textInputFocused}
-                    />
-                    <TouchableOpacity
-                        style={styles.signUpButton}
-                        onPress={form.handleSubmit(handleSignUp)}
-                        activeOpacity={0.9}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.signUpText}>Register</Text>
-                        )}
-                    </TouchableOpacity>
-                    
-                    <View style={styles.logInSection}>
-                        <Text style={styles.logInText}>Already have an account? </Text>
-                        <TouchableOpacity onPress={handleLogInPress}>
-                            <Text style={styles.logInLink}>Sign In</Text>
-                        </TouchableOpacity>
-                    </View>
-                    
-                    <Text style={styles.termsText}>
-                        By continuing, you agree to our Terms and Privacy Policy
-                    </Text>
-                </View>
-            </FormProvider>
-        </KeyboardAwareScrollView>
-    );
-}
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     illustrationContainer: {
         flex: 1,
         justifyContent: "center",
@@ -227,5 +155,78 @@ const styles = StyleSheet.create({
         lineHeight: 16,
     },
 });
+
+    return (
+        <KeyboardAwareScrollView>
+            <FormProvider {...form}>
+                <View style={styles.illustrationContainer}>
+                    <Image 
+                        source={require("../../assets/logo.png")}
+                        style={styles.illustration}
+                        resizeMode='cover'
+                    />
+                </View>
+                <View style={styles.loginSection}>
+                    <CustomTextInput 
+                        placeholder='John Don' 
+                        name='username' 
+                        label='Username' 
+                        containerStyle={styles.inputContainer}
+                        style={styles.textInput}
+                        focusStyle={styles.textInputFocused}
+                    />
+                    <CustomTextInput 
+                        placeholder='email@example.com' 
+                        name='email' 
+                        label='Email' 
+                        containerStyle={styles.inputContainer}
+                        style={styles.textInput}
+                        focusStyle={styles.textInputFocused}
+                    />
+                    <CustomTextInput 
+                        placeholder='Password' 
+                        name='password' 
+                        label='Password' 
+                        secureTextEntry
+                        containerStyle={styles.inputContainer}
+                        style={styles.textInput}
+                        focusStyle={styles.textInputFocused}
+                    />
+                    <CustomTextInput 
+                        placeholder='Confirm Password' 
+                        name='confirmPassword' 
+                        label='Confirm Password' 
+                        secureTextEntry
+                        containerStyle={styles.inputContainer}
+                        style={styles.textInput}
+                        focusStyle={styles.textInputFocused}
+                    />
+                    <TouchableOpacity
+                        style={styles.signUpButton}
+                        onPress={form.handleSubmit(handleSignUp)}
+                        activeOpacity={0.9}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.signUpText}>Register</Text>
+                        )}
+                    </TouchableOpacity>
+                    
+                    <View style={styles.logInSection}>
+                        <Text style={styles.logInText}>Already have an account? </Text>
+                        <TouchableOpacity onPress={handleLogInPress}>
+                            <Text style={styles.logInLink}>Sign In</Text>
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <Text style={styles.termsText}>
+                        By continuing, you agree to our Terms and Privacy Policy
+                    </Text>
+                </View>
+            </FormProvider>
+        </KeyboardAwareScrollView>
+    );
+}
 
 export default SiginupScreen;

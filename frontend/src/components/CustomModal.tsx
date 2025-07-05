@@ -2,7 +2,7 @@ import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet, Image, Tex
 import React, { useCallback, useMemo, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import COLORS from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { DataType, data } from '../data/card-data';
 import truncateWords from '../helper/truncateWords';
 
@@ -17,6 +17,7 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
     const [selectedEvent, setSelectedEvent] = useState<DataType | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const availableEvents = useMemo(() => data, []);
+    const { COLORS } = useTheme();
 
     // Filter events by search query
     const filteredEvents = useMemo(() => {
@@ -55,166 +56,7 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
         return upcomingEvents.find(e => e.id === event.id);
     }, [upcomingEvents]);
 
-    // Event List View
-    const renderEventList = () => (
-        <>
-            <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Wellness Event</Text>
-                <TouchableOpacity 
-                    style={styles.closeButton}
-                    onPress={handleCloseModal}
-                >
-                    <Ionicons name="close" size={24} color={COLORS.textDark} />
-                </TouchableOpacity>
-            </View>
-            <View style={styles.searchContainer}>
-                <Ionicons name="search" size={18} color={COLORS.grey} style={{ marginRight: 8 }} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search events..."
-                    placeholderTextColor={COLORS.grey}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    returnKeyType="search"
-                />
-            </View>
-            <ScrollView style={styles.modalContent}>
-                <Text style={styles.modalSubtitle}>Choose events to add to your wellness routine:</Text>
-                {filteredEvents.length === 0 && (
-                    <Text style={{ color: COLORS.grey, textAlign: 'center', marginTop: 24 }}>No events found.</Text>
-                )}
-                {filteredEvents.map((event) => {
-                    const isAdded = isEventAdded(event);
-                    return (
-                        <TouchableOpacity
-                            key={event.id}
-                            style={[styles.eventOption, isAdded && styles.eventOptionAdded]}
-                            onPress={() => handleEventPress(event)}
-                        >
-                            <View style={styles.eventOptionIcon}>
-                                <Image style={styles.eventImage} source={event.image} />
-                            </View>
-                            <View style={styles.eventOptionContent}>
-                                <Text style={styles.eventOptionTitle}>{event.title}</Text>
-                                <Text style={styles.eventOptionDescription}>{truncateWords({ text: event.description, maxWords: 5 })}</Text>
-                            </View>
-                            <View style={styles.eventOptionActions}>
-                                {isAdded && (
-                                    <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
-                                )}
-                                <Ionicons name="chevron-forward" size={20} color={COLORS.grey} style={{ marginLeft: 8 }} />
-                            </View>
-                        </TouchableOpacity>
-                    );
-                })}
-            </ScrollView>
-        </>
-    );
-
-    // Event Detail View
-    const renderEventDetail = () => {
-        if (!selectedEvent) return null;
-        
-        const isAdded = isEventAdded(selectedEvent);
-        
-        return (
-            <>
-                <View style={styles.modalHeader}>
-                    <TouchableOpacity 
-                        style={styles.backButton}
-                        onPress={handleBackToList}
-                    >
-                        <Ionicons name="chevron-back" size={24} color={COLORS.textDark} />
-                    </TouchableOpacity>
-                    <Text style={styles.modalTitle}>Event Details</Text>
-                    <TouchableOpacity 
-                        style={styles.closeButton}
-                        onPress={handleCloseModal}
-                    >
-                        <Ionicons name="close" size={24} color={COLORS.textDark} />
-                    </TouchableOpacity>
-                </View>
-                
-                <ScrollView style={styles.modalContent}>
-                    <View style={styles.eventDetailContainer}>
-                        <View style={styles.eventDetailImageContainer}>
-                            <Image style={styles.eventDetailImage} source={selectedEvent.image} />
-                        </View>
-                        
-                        <View style={styles.eventDetailContent}>
-                            <Text style={styles.eventDetailTitle}>{selectedEvent.title}</Text>
-                            <Text style={styles.eventDetailDescription}>{selectedEvent.description}</Text>
-                            
-                            {/* Additional event details can be added here */}
-                            {selectedEvent.date && (
-                                <View style={styles.eventDetailItem}>
-                                    <Ionicons name="time-outline" size={16} color={COLORS.grey} />
-                                    <Text style={styles.eventDetailText}>{selectedEvent.date}</Text>
-                                </View>
-                            )}
-                            
-                            {selectedEvent.status && (
-                                <View style={styles.eventDetailItem}>
-                                    <Ionicons name="hourglass-outline" size={16} color={COLORS.grey} />
-                                    <Text style={styles.eventDetailText}>{selectedEvent.status}</Text>
-                                </View>
-                            )}
-                            
-                            {selectedEvent.location && (
-                                <View style={styles.eventDetailItem}>
-                                    <Ionicons name="location-outline" size={16} color={COLORS.grey} />
-                                    <Text style={styles.eventDetailText}>{selectedEvent.location}</Text>
-                                </View>
-                            )}
-                            
-                            {selectedEvent.organizer && (
-                                <View style={styles.eventDetailItem}>
-                                    <Ionicons name="person-outline" size={16} color={COLORS.grey} />
-                                    <Text style={styles.eventDetailText}>Instructor: {selectedEvent.organizer}</Text>
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                </ScrollView>
-                
-                <View style={styles.eventDetailActions}>
-                    {isAdded ? (
-                        <TouchableOpacity
-                            style={[styles.actionButton, styles.removeButton]}
-                            onPress={() => handleRemoveEvent(selectedEvent)}
-                        >
-                            <Ionicons name="remove-circle-outline" size={20} color="white" />
-                            <Text style={styles.actionButtonText}>Remove from Schedule</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity
-                            style={[styles.actionButton, styles.addButton]}
-                            onPress={() => handleAddEvent(selectedEvent)}
-                        >
-                            <Ionicons name="add-circle-outline" size={20} color="white" />
-                            <Text style={styles.actionButtonText}>Add to Schedule</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-            </>
-        );
-    };
-    
-    return (
-        <Modal
-            visible={showEventModal}
-            animationType="slide"
-            presentationStyle="pageSheet"
-            onRequestClose={handleCloseModal}
-        >
-            <SafeAreaView style={styles.modalContainer}>
-                {selectedEvent ? renderEventDetail() : renderEventList()}
-            </SafeAreaView>
-        </Modal>
-    )
-}
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     // Modal Styles
     modalContainer: {
         flex: 1,
@@ -402,5 +244,164 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
 })
+
+    // Event List View
+    const renderEventList = () => (
+        <>
+            <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add Wellness Event</Text>
+                <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={handleCloseModal}
+                >
+                    <Ionicons name="close" size={24} color={COLORS.textDark} />
+                </TouchableOpacity>
+            </View>
+            <View style={styles.searchContainer}>
+                <Ionicons name="search" size={18} color={COLORS.grey} style={{ marginRight: 8 }} />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search events..."
+                    placeholderTextColor={COLORS.grey}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    returnKeyType="search"
+                />
+            </View>
+            <ScrollView style={styles.modalContent}>
+                <Text style={styles.modalSubtitle}>Choose events to add to your wellness routine:</Text>
+                {filteredEvents.length === 0 && (
+                    <Text style={{ color: COLORS.grey, textAlign: 'center', marginTop: 24 }}>No events found.</Text>
+                )}
+                {filteredEvents.map((event) => {
+                    const isAdded = isEventAdded(event);
+                    return (
+                        <TouchableOpacity
+                            key={event.id}
+                            style={[styles.eventOption, isAdded && styles.eventOptionAdded]}
+                            onPress={() => handleEventPress(event)}
+                        >
+                            <View style={styles.eventOptionIcon}>
+                                <Image style={styles.eventImage} source={event.image} />
+                            </View>
+                            <View style={styles.eventOptionContent}>
+                                <Text style={styles.eventOptionTitle}>{event.title}</Text>
+                                <Text style={styles.eventOptionDescription}>{truncateWords({ text: event.description, maxWords: 5 })}</Text>
+                            </View>
+                            <View style={styles.eventOptionActions}>
+                                {isAdded && (
+                                    <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                                )}
+                                <Ionicons name="chevron-forward" size={20} color={COLORS.grey} style={{ marginLeft: 8 }} />
+                            </View>
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+        </>
+    );
+
+    // Event Detail View
+    const renderEventDetail = () => {
+        if (!selectedEvent) return null;
+        
+        const isAdded = isEventAdded(selectedEvent);
+        
+        return (
+            <>
+                <View style={styles.modalHeader}>
+                    <TouchableOpacity 
+                        style={styles.backButton}
+                        onPress={handleBackToList}
+                    >
+                        <Ionicons name="chevron-back" size={24} color={COLORS.textDark} />
+                    </TouchableOpacity>
+                    <Text style={styles.modalTitle}>Event Details</Text>
+                    <TouchableOpacity 
+                        style={styles.closeButton}
+                        onPress={handleCloseModal}
+                    >
+                        <Ionicons name="close" size={24} color={COLORS.textDark} />
+                    </TouchableOpacity>
+                </View>
+                
+                <ScrollView style={styles.modalContent}>
+                    <View style={styles.eventDetailContainer}>
+                        <View style={styles.eventDetailImageContainer}>
+                            <Image style={styles.eventDetailImage} source={selectedEvent.image} />
+                        </View>
+                        
+                        <View style={styles.eventDetailContent}>
+                            <Text style={styles.eventDetailTitle}>{selectedEvent.title}</Text>
+                            <Text style={styles.eventDetailDescription}>{selectedEvent.description}</Text>
+                            
+                            {/* Additional event details can be added here */}
+                            {selectedEvent.date && (
+                                <View style={styles.eventDetailItem}>
+                                    <Ionicons name="time-outline" size={16} color={COLORS.grey} />
+                                    <Text style={styles.eventDetailText}>{selectedEvent.date}</Text>
+                                </View>
+                            )}
+                            
+                            {selectedEvent.status && (
+                                <View style={styles.eventDetailItem}>
+                                    <Ionicons name="hourglass-outline" size={16} color={COLORS.grey} />
+                                    <Text style={styles.eventDetailText}>{selectedEvent.status}</Text>
+                                </View>
+                            )}
+                            
+                            {selectedEvent.location && (
+                                <View style={styles.eventDetailItem}>
+                                    <Ionicons name="location-outline" size={16} color={COLORS.grey} />
+                                    <Text style={styles.eventDetailText}>{selectedEvent.location}</Text>
+                                </View>
+                            )}
+                            
+                            {selectedEvent.organizer && (
+                                <View style={styles.eventDetailItem}>
+                                    <Ionicons name="person-outline" size={16} color={COLORS.grey} />
+                                    <Text style={styles.eventDetailText}>Instructor: {selectedEvent.organizer}</Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                </ScrollView>
+                
+                <View style={styles.eventDetailActions}>
+                    {isAdded ? (
+                        <TouchableOpacity
+                            style={[styles.actionButton, styles.removeButton]}
+                            onPress={() => handleRemoveEvent(selectedEvent)}
+                        >
+                            <Ionicons name="remove-circle-outline" size={20} color="white" />
+                            <Text style={styles.actionButtonText}>Remove from Schedule</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            style={[styles.actionButton, styles.addButton]}
+                            onPress={() => handleAddEvent(selectedEvent)}
+                        >
+                            <Ionicons name="add-circle-outline" size={20} color="white" />
+                            <Text style={styles.actionButtonText}>Add to Schedule</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </>
+        );
+    };
+    
+    return (
+        <Modal
+            visible={showEventModal}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={handleCloseModal}
+        >
+            <SafeAreaView style={styles.modalContainer}>
+                {selectedEvent ? renderEventDetail() : renderEventList()}
+            </SafeAreaView>
+        </Modal>
+    )
+}
 
 export default CustomModal

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, ActivityIndi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
-import COLORS from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Resource {
   id: number;
@@ -28,6 +28,7 @@ const AudioScreen = () => {
     }
     return null;
   }, [params.resources]);
+  const { COLORS } = useTheme();
 
   const renderItem = ({ item }: { item: Resource }) => (
     <TouchableOpacity
@@ -61,41 +62,7 @@ const AudioScreen = () => {
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Audio</Text>
-          <Text style={styles.headerDescription}>Listen to guided audio sessions for relaxation and focus.</Text>
-        </View>
-      </View>
-      {!resources ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-      ) : resources.length === 0 ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: COLORS.grey, fontSize: 16 }}>No audio resources found.</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={resources}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          columnWrapperStyle={styles.cardRow}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </SafeAreaView>
-  );
-};
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#fafafa' 
@@ -193,5 +160,39 @@ const styles = StyleSheet.create({
     fontSize: 16 
   },
 });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.textDark} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Audio</Text>
+          <Text style={styles.headerDescription}>Listen to guided audio sessions for relaxation and focus.</Text>
+        </View>
+      </View>
+      {!resources ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : resources.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: COLORS.grey, fontSize: 16 }}>No audio resources found.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={resources}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.cardRow}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </SafeAreaView>
+  );
+};
 
 export default AudioScreen;

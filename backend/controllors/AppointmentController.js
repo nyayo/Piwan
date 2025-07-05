@@ -31,6 +31,15 @@ export const create = async(req, res) => {
         if(response.success){
             // Log activity for user
             await logActivity(req.user.id, req.user.role, 'appointment_create', `Created appointment with consultant ID ${consultant_id}`);
+            // Send notifications to both user and consultant
+            try {
+                // Send to user
+                await sendPushNotificationToUser(user_id, 'Appointment Booked', `Your appointment with consultant ID ${consultant_id} is scheduled for ${appointment.appointment_datetime}`, { appointmentId: response.appointment.id });
+                // Send to consultant
+                await sendPushNotificationToConsultant(consultant_id, 'New Appointment', `You have a new appointment with user ID ${user_id} scheduled for ${appointment.appointment_datetime}`, { appointmentId: response.appointment.id });
+            } catch (notifyErr) {
+                console.error('Notification error (create):', notifyErr);
+            }
             return res.status(201).json(response);
         } else {
             return res.status(400).json(response);
@@ -142,6 +151,20 @@ export const update = async(req, res) => {
     try {
         const response = await updateStatus(userId, userType, appointmentId, statusUpdate);
         if(response.success){
+            // If cancelled, send notifications to both user and consultant
+            if (status === 'cancelled') {
+                // Fetch appointment details for notification context
+                const [rows] = await pool.query('SELECT * FROM appointments WHERE id = ?', [appointmentId]);
+                if (rows.length) {
+                    const appt = rows[0];
+                    try {
+                        await sendPushNotificationToUser(appt.user_id, 'Appointment Cancelled', `Your appointment scheduled for ${appt.appointment_datetime} has been cancelled.`, { appointmentId });
+                        await sendPushNotificationToConsultant(appt.consultant_id, 'Appointment Cancelled', `An appointment scheduled for ${appt.appointment_datetime} has been cancelled.`, { appointmentId });
+                    } catch (notifyErr) {
+                        console.error('Notification error (cancel):', notifyErr);
+                    }
+                }
+            }
             return res.status(200).json(response);
         }else {
             return res.status(400).json(response);
@@ -165,6 +188,17 @@ export const review = async(req, res) => {
     try {
         const response = await consultantReview(userId, consultantId, review);
         if(response.success){
+            // Notify consultant of new review
+            try {
+                await sendPushNotificationToConsultant(
+                    consultantId,
+                    'New Review Received',
+                    'You have received a new review from a patient.',
+                    { userId, rating, review_text }
+                );
+            } catch (notifyErr) {
+                console.error('Notification error (review):', notifyErr);
+            }
             return res.status(200).json(response);
         }else {
             return res.status(400).json(response);
@@ -264,6 +298,21 @@ export const confirm = async (req, res) => {
     try {
         const result = await confirmAppointment(consultantId, appointmentId);
         if (result.success) {
+            // Fetch appointment details and notify user
+            const [rows] = await pool.query('SELECT * FROM appointments WHERE id = ?', [appointmentId]);
+            if (rows.length) {
+                const appt = rows[0];
+                try {
+                    await sendPushNotificationToUser(
+                        appt.user_id,
+                        'Appointment Confirmed',
+                        `Your appointment scheduled for ${appt.appointment_datetime} has been confirmed by the consultant.`,
+                        { appointmentId }
+                    );
+                } catch (notifyErr) {
+                    console.error('Notification error (confirm):', notifyErr);
+                }
+            }
             return res.status(200).json(result);
         } else {
             return res.status(400).json(result);
