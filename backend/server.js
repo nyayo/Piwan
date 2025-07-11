@@ -10,6 +10,7 @@ import activityRoutes from './routes/activityRoutes.js';
 import cloudinarySignatureRouter from './routes/cloudinarySignature.js';
 import moodRoutes from './routes/moodRoutes.js';
 import resourceRoutes from './routes/resourceRoutes.js'
+import chatRoutes from './routes/chatRoutes.js';
 import './jobs/reminderJob.js';
 
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/mood', moodRoutes);
 app.use('/api', cloudinarySignatureRouter);
 app.use('/api/resources', resourceRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.listen(3000, async() => {
     console.log('Server running at port 3000.')

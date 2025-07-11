@@ -197,6 +197,7 @@ const Index = () => {
   const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   loadingContainer: {
     justifyContent: 'center',
@@ -328,7 +329,7 @@ const Index = () => {
   },
   modernTabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 25,
     padding: 4,
     marginBottom: 24,
@@ -530,7 +531,7 @@ const Index = () => {
           upcomingEvents={upcomingEvents} 
           showEventModal={showEventModal}
           />
-          <StatusBar style="dark" />
+          <StatusBar style="auto" />
         </ScrollView>
       </SafeAreaView>
     </GestureHandlerRootView>

@@ -69,13 +69,13 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
     };
 
     const handleChatPress = () => {
-        if (!isChatActive) {
-            Alert.alert(
-                'Chat Not Available', 
-                'Chat will be available 15 minutes before your appointment time.'
-            );
-            return;
-        }
+        // if (!isChatActive) {
+        //     Alert.alert(
+        //         'Chat Not Available', 
+        //         'Chat will be available 15 minutes before your appointment time.'
+        //     );
+        //     return;
+        // }
         
         if (onChatPress) {
             onChatPress(appointment);
@@ -86,7 +86,7 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
 
     const styles = StyleSheet.create({
     carouselCard: {
-        backgroundColor: COLORS.textDark,
+        backgroundColor: COLORS.cardBackground,
         borderRadius: 20,
         padding: 20,
         marginRight: 16,
@@ -101,7 +101,7 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
         marginBottom: 8,
     },
     statusBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: COLORS.border,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,

@@ -22,7 +22,7 @@ const EmptyEventsCarousel = () => {
         borderStyle: 'dashed',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F9F9F9',
+        backgroundColor: COLORS.cardBackground,
     },
     emptyTitle: {
         fontSize: 18,

@@ -18,7 +18,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
-import { cancelAppointment, getUserAppointments } from '../../services/api';
+import { useRouter } from 'expo-router';
+import { cancelAppointment, createAppointmentChatRoom, getUserAppointments } from '../../services/api';
 import CarouselCard from '../../components/CarouselCard';
 import PastAppointmentCard from '../../components/PastAppointmentCard';
 import FeedbackBanner from '../../components/FeedbackBanner';
@@ -55,6 +56,7 @@ export default function AppointmentsScreen() {
   const { user } = useAuth() as AuthContextType;
   const { COLORS } = useTheme();
   const navigation = useNavigation();
+  const router = useRouter()
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -287,8 +289,22 @@ export default function AppointmentsScreen() {
     }
   };
 
-  const handleChat = (appointment: Appointment) => {
+  const handleChat = async (appointment: Appointment) => {
     console.log('Starting chat with:', appointment.consultant_name);
+    try {
+      // Call backend to create/get Stream channel for this appointment
+      const channel = await createAppointmentChatRoom(appointment.id, appointment.consultant_id, appointment.user_id);
+      // Navigate to chat screen, passing channel info
+      router.push({
+        pathname: '/(screens)/ChatRoomScreen',
+        params: { 
+          channelId: channel.id, 
+          appointmentId: appointment.id 
+        }
+      });
+    } catch (err) {
+      Alert.alert('Error', 'Unable to start chat. Please try again.');
+    }
   };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {

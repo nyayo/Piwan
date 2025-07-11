@@ -1,24 +1,28 @@
-// (users)/chat.tsx
-import React, { useState } from 'react';
+// components/ChatComponent.tsx (Create this file)
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, Modal, Alert, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ChannelList } from 'stream-chat-react-native-core';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/authContext';
-import { useChatContext } from '../../context/ChatContext';
+import { 
+    ChannelList, 
+    Chat, 
+    ChannelPreviewMessenger 
+} from 'stream-chat-react-native-core';
+import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/authContext';
+import { useChatContext } from '../context/ChatContext';
 
-const UsersChatScreen = () => {
+const ChatComponent = () => {
     const { COLORS, mode } = useTheme();
     const { user } = useAuth();
     const router = useRouter();
-    const { client, createRoom, isConnected, loading, error } = useChatContext();
+    const { client, createRoom, isConnected } = useChatContext();
 
     const [groupModalVisible, setGroupModalVisible] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
 
-    // Stream Chat filters specifically for users
+    // Stream Chat filters
     const filters = {
         type: 'messaging',
         members: { $in: [user?.id] },
@@ -49,7 +53,6 @@ const UsersChatScreen = () => {
         }
     };
 
-    // Handle channel selection
     const onSelectChannel = (channel) => {
         router.push({
             pathname: '/(screens)/ChatRoomScreen',
@@ -60,7 +63,6 @@ const UsersChatScreen = () => {
         });
     };
 
-    // Custom channel preview component
     const CustomChannelPreview = ({ channel, ...props }) => (
         <TouchableOpacity
             style={[styles.channelPreview, { borderColor: COLORS.border }]}
@@ -87,7 +89,6 @@ const UsersChatScreen = () => {
         </TouchableOpacity>
     );
 
-    // Group creation modal
     const renderGroupModal = () => (
         <Modal visible={groupModalVisible} animationType="slide">
             <View style={[styles.modalContainer, { backgroundColor: COLORS.background }]}>
@@ -134,8 +135,7 @@ const UsersChatScreen = () => {
         </Modal>
     );
 
-    // Show loading state
-    if (loading) {
+    if (!isConnected || !client) {
         return (
             <View style={[styles.loadingContainer, { backgroundColor: COLORS.background }]}>
                 <Text style={[styles.loadingText, { color: COLORS.textDark }]}>
@@ -145,36 +145,16 @@ const UsersChatScreen = () => {
         );
     }
 
-    // Show error state
-    if (error) {
-        return (
-            <View style={[styles.loadingContainer, { backgroundColor: COLORS.background }]}>
-                <Text style={[styles.loadingText, { color: 'red' }]}>
-                    Error: {error}
-                </Text>
-            </View>
-        );
-    }
-
-    // Show not connected state
-    if (!isConnected || !client) {
-        return (
-            <View style={[styles.loadingContainer, { backgroundColor: COLORS.background }]}>
-                <Text style={[styles.loadingText, { color: COLORS.textDark }]}>
-                    Chat not connected
-                </Text>
-            </View>
-        );
-    }
-
     return (
         <View style={[styles.container, { backgroundColor: COLORS.background }]}>
-            <ChannelList
-                filters={filters}
-                sort={sort}
-                Preview={CustomChannelPreview}
-                onSelect={onSelectChannel}
-            />
+            <Chat client={client}>
+                <ChannelList
+                    filters={filters}
+                    sort={sort}
+                    Preview={CustomChannelPreview}
+                    onSelect={onSelectChannel}
+                />
+            </Chat>
             
             <TouchableOpacity 
                 style={[styles.fab, { backgroundColor: COLORS.primary }]}
@@ -285,4 +265,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default UsersChatScreen;
+export default ChatComponent;

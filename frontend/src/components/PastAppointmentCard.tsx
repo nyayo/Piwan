@@ -1,41 +1,18 @@
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native'
 import React from 'react'
 import { formatTime, convertToLocalDate, toLocalDateTimeString } from '../helper/convertDateTime';
+import { useTheme } from '../context/ThemeContext';
 
 type CarouselCardProps = {
     appointment: PastType;
 }
 
 const CarouselCard = ({ appointment }: CarouselCardProps) => {
-    return (
-        <View style={styles.pastCard}>
-            <Image source={{ uri: appointment.profile_image }} style={styles.pastDoctorAvatar} />
-            <View style={styles.pastDoctorInfo}>
-            <Text style={styles.pastDoctorName}>{appointment.consultant_name}</Text>
-            <Text style={styles.pastAppointmentDetails}>
-                {appointment.profession} — {convertToLocalDate(appointment.appointment_datetime)} • {formatTime(appointment.appointment_datetime)}
-            </Text>
-            <Text style={styles.dateText}>
-                {toLocalDateTimeString(appointment.appointment_datetime)}
-            </Text>
-            </View>
-            <View style={styles.pastPriceContainer}>
-            <Text style={styles.pastPrice}>{appointment.status}</Text>
-            </View>
-        </View>
-        );
-}
+    const {COLORS} = useTheme();
 
-const COLORS = {
-  ...require('../constants/theme').default,
-  textLight: '#b0b0b0',
-  shadow: 'rgba(0,0,0,0.1)',
-  lightGrey: '#f1f1f1',
-};
-
-const styles = StyleSheet.create({
+    const styles = StyleSheet.create({
     pastCard: {
-        backgroundColor: COLORS.white,
+        backgroundColor: COLORS.cardBackground,
         borderRadius: 16,
         padding: 16,
         flexDirection: 'row',
@@ -71,17 +48,42 @@ const styles = StyleSheet.create({
         color: COLORS.grey,
     },
     pastPriceContainer: {
-        backgroundColor: COLORS.textDark,
+        backgroundColor: COLORS.inputBackground,
         borderRadius: 12,
         paddingHorizontal: 12,
         paddingVertical: 6,
     },
     pastPrice: {
-        color: COLORS.white,
+        color: COLORS.primary,
         fontSize: 14,
         fontWeight: '600',
     },
 })
+    return (
+        <View style={styles.pastCard}>
+            <Image source={{ uri: appointment.profile_image }} style={styles.pastDoctorAvatar} />
+            <View style={styles.pastDoctorInfo}>
+            <Text style={styles.pastDoctorName}>{appointment.consultant_name}</Text>
+            <Text style={styles.pastAppointmentDetails}>
+                {appointment.profession} — {convertToLocalDate(appointment.appointment_datetime)} • {formatTime(appointment.appointment_datetime)}
+            </Text>
+            <Text style={styles.dateText}>
+                {toLocalDateTimeString(appointment.appointment_datetime)}
+            </Text>
+            </View>
+            <View style={styles.pastPriceContainer}>
+            <Text style={styles.pastPrice}>{appointment.status}</Text>
+            </View>
+        </View>
+        );
+}
+
+const COLORS = {
+  ...require('../constants/theme').default,
+  textLight: '#b0b0b0',
+  shadow: 'rgba(0,0,0,0.1)',
+  lightGrey: '#f1f1f1',
+};
 
 export default CarouselCard;
 

@@ -94,7 +94,7 @@ const SiginupScreen = () => {
         borderWidth: 1.5,
         borderColor: COLORS.grey + '40', // Semi-transparent grey
         borderRadius: 12,
-        backgroundColor: COLORS.white,
+        backgroundColor: COLORS.inputBackground,
         color: COLORS.textPrimary,
     },
     textInputFocused: {

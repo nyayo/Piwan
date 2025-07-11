@@ -60,7 +60,7 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
     // Modal Styles
     modalContainer: {
         flex: 1,
-        backgroundColor: 'white',
+        backgroundColor: COLORS.background,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -99,7 +99,7 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
         alignItems: 'center',
         marginBottom: 12,
         borderRadius: 12,
-        backgroundColor: '#F9F9F9',
+        backgroundColor: COLORS.cardBackground,
         borderWidth: 1,
         borderColor: COLORS.border || '#E0E0E0',
         overflow: 'hidden',
@@ -190,7 +190,7 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
         paddingVertical: 8,
         paddingHorizontal: 16,
         marginBottom: 8,
-        backgroundColor: '#F9F9F9',
+        backgroundColor: COLORS.cardBackground,
         borderRadius: 8,
     },
     eventDetailText: {
@@ -227,7 +227,7 @@ const CustomModal = ({showEventModal, setShowEventModal, upcomingEvents, setUpco
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
+        backgroundColor: COLORS.inputBackground,
         borderRadius: 8,
         marginHorizontal: 16,
         marginTop: 16,

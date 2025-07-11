@@ -1,5 +1,69 @@
 import { pool } from "../config/db.js";
 
+const chatRoomsTable = `
+    CREATE TABLE IF NOT EXISTS chat_rooms (
+        id VARCHAR(255) PRIMARY KEY,
+        name VARCHAR(255),
+        type ENUM('messaging', 'livestream', 'team', 'gaming', 'commerce') DEFAULT 'messaging',
+        created_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+`;
+const chatMembersTable = `
+    CREATE TABLE IF NOT EXISTS chat_members (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        room_id VARCHAR(255),
+        user_id INT,
+        user_type ENUM('user', 'consultant', 'admin') DEFAULT 'user',
+        role ENUM('member', 'moderator', 'admin', 'owner') DEFAULT 'member',
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_room_user (room_id, user_id)
+    )
+`;
+const messagesTable = `
+    CREATE TABLE IF NOT EXISTS chat_messages (
+        id VARCHAR(255) PRIMARY KEY,
+        room_id VARCHAR(255),
+        user_id INT,
+        user_type ENUM('user', 'consultant', 'admin') DEFAULT 'user',
+        message_type ENUM('regular', 'system', 'error', 'reply', 'ephemeral') DEFAULT 'regular',
+        text TEXT,
+        attachments JSON,
+        mentioned_users JSON,
+        parent_id VARCHAR(255),
+        thread_participants JSON,
+        reaction_counts JSON,
+        reply_count INT DEFAULT 0,
+        stream_message_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP NULL,
+        FOREIGN KEY (room_id) REFERENCES chat_rooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (parent_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+        INDEX idx_room_created (room_id, created_at),
+        INDEX idx_user_created (user_id, created_at),
+        INDEX idx_parent_id (parent_id)
+    )
+`;
+const messageReactionsTable = `
+    CREATE TABLE IF NOT EXISTS message_reactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        message_id VARCHAR(255),
+        user_id INT,
+        user_type ENUM('user', 'consultant', 'admin') DEFAULT 'user',
+        reaction_type VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_message_user_reaction (message_id, user_id, reaction_type)
+    )
+`;
+
 const activitiesQuery = `
     CREATE TABLE IF NOT EXISTS activities (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -145,6 +209,10 @@ const createAllTables = async() => {
         await createTable('Reviews', reviewQuery);
         await createTable('Events', eventQuery);
         await createTable('Activities', activitiesQuery);
+        await createTable('Chat Rooms', chatRoomsTable);
+        await createTable('Chat Members', chatMembersTable);
+        await createTable('Messages', messagesTable);
+        await createTable('Message Reactions', messageReactionsTable);
         console.log('All tables created successfully.')
     } catch (error) {
         console.log('Error during table creation: ', error)

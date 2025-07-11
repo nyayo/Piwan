@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure base URL (update with your backend URL)
-export const API_BASE_URL = 'https://b7ff-41-75-182-148.ngrok-free.app/api'; // Use your local IP
+export const API_BASE_URL = 'https://62ef365cf31d.ngrok-free.app/api'; // Use your local IP
 // For development on physical device, use your computer's IP address
 // For iOS simulator: http://localhost:3000/api
 // For Android emulator: http://10.0.2.2:3000/api
@@ -599,6 +599,79 @@ export const updateNotificationPreference = async (enabled) => {
     return res.data;
   } catch (error) {
     throw error;
+  }
+};
+
+// --- Chat API ---
+// Get Stream chat token for the current user
+export const generateChatToken = async () => {
+  try {
+    const response = await apiClient.get('/chat/token');
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// Create a chat room (direct, group, or appointment)
+export const createChatRoom = async (roomData) => {
+  try {
+    const response = await apiClient.post('/chat/rooms', roomData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// Get all chat rooms for the current user
+export const getUserChatRooms = async () => {
+  try {
+    const response = await apiClient.get('/chat/rooms');
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// Get messages for a specific chat room
+export const getRoomMessages = async (roomId, limit = 50, before = null) => {
+  try {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (before) params.append('before', before);
+    const response = await apiClient.get(`/chat/rooms/${roomId}/messages?${params}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// Join a chat room (if needed)
+export const joinChatRoom = async (roomId) => {
+  try {
+    const response = await apiClient.post(`/chat/rooms/${roomId}/join`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// Create an appointment-based chat room
+export const createAppointmentChatRoom = async (appointmentId, consultantId, userId) => {
+  try {
+    const roomId = `appointment_${appointmentId}`;
+    const roomData = {
+      roomId,
+      name: `Appointment ${appointmentId}`,
+      type: 'messaging',
+      members: [
+        { user_id: consultantId, user_type: 'consultant', role: 'member' },
+        { user_id: userId, user_type: 'user', role: 'member' }
+      ]
+    };
+    const response = await apiClient.post('/chat/rooms', roomData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
   }
 };
 
