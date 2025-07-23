@@ -1,6 +1,63 @@
 import { StreamChatService } from '../services/StreamChatService.js';
 import { sendPushNotificationAsync } from '../services/NotificationService.js';
 import { pool } from '../config/db.js';
+import crypto from 'crypto';
+
+export const verifyWebhookSignature = (req, res, next) => {
+    try {
+        const signature = req.headers['x-signature'];
+        const secret = process.env.STREAM_API_SECRET;
+        
+        console.log('Webhook signature verification:');
+        console.log('- Received signature:', signature);
+        console.log('- Using secret:', secret ? 'Present' : 'Missing');
+        
+        if (!signature || !secret) {
+            console.log('❌ Missing signature or secret');
+            return res.status(401).json({ error: 'Missing signature or secret' });
+        }
+        
+        // Get raw body - this should be the Buffer from express.raw()
+        let rawBody = req.rawBody;
+        
+        if (!rawBody) {
+            console.log('❌ No raw body found');
+            return res.status(400).json({ error: 'No raw body for signature verification' });
+        }
+        
+        // Convert Buffer to string if needed
+        if (Buffer.isBuffer(rawBody)) {
+            rawBody = rawBody.toString('utf8');
+        }
+        
+        console.log('- Raw body length:', rawBody.length);
+        console.log('- Raw body type:', typeof rawBody);
+        
+        // Generate the expected signature hash (without sha256= prefix)
+        const expectedHash = crypto
+            .createHmac('sha256', secret)
+            .update(rawBody, 'utf8')
+            .digest('hex');
+        
+        // Stream Chat sends signature without 'sha256=' prefix
+        const expectedSignature = expectedHash;
+        
+        console.log('- Expected signature:', expectedSignature);
+        console.log('- Signatures match:', signature === expectedSignature);
+        
+        if (signature !== expectedSignature) {
+            console.log('❌ Invalid signature');
+            return res.status(401).json({ error: 'Invalid signature' });
+        }
+        
+        console.log('✅ Signature verification passed');
+        next();
+    } catch (error) {
+        console.error('Signature verification error:', error);
+        return res.status(401).json({ error: 'Signature verification failed' });
+    }
+};
+
 
 export const generateChatToken = async (req, res) => {
     try {
@@ -101,26 +158,55 @@ export const joinRoom = async (req, res) => {
 export const handleStreamWebhook = async (req, res) => {
     try {
         const { type, ...eventData } = req.body;
+        
+        // Handle message.new - STORE the message AND send notifications
         if (type === 'message.new') {
-        const message = eventData.message;
-        const channelId = eventData.channel_id;
-        // Get all members of the chat room except the sender
-        const [members] = await pool.query(
-            'SELECT user_id FROM chat_members WHERE room_id = ? AND user_id != ?',
-            [channelId, message.user.id]
-        );
-        // For each member, get their push token and send notification
-        for (const member of members) {
-            const [userRows] = await pool.query('SELECT push_token FROM users WHERE id = ?', [member.user_id]);
-            if (userRows.length && userRows[0].push_token) {
-            await sendPushNotificationAsync(
-                userRows[0].push_token,
-                'New Chat Message',
-                `${message.user.name}: ${message.text}`,
-                { roomId: channelId, messageId: message.id }
-            );
+            const message = eventData.message;
+            const channelId = eventData.channel_id;
+            
+            // 1. STORE THE MESSAGE FIRST
+            try {
+                await StreamChatService.storeMessage({
+                    id: message.id,
+                    room_id: channelId,
+                    user_id: parseInt(message.user.id),
+                    user_type: message.user.role || 'user',
+                    message_type: message.type || 'regular',
+                    text: message.text,
+                    attachments: message.attachments,
+                    mentioned_users: message.mentioned_users,
+                    parent_id: message.parent_id,
+                    thread_participants: message.thread_participants,
+                    reaction_counts: message.reaction_counts,
+                    reply_count: message.reply_count,
+                    stream_message_id: message.id
+                });
+                console.log('Message stored successfully:', message.id);
+            } catch (storeError) {
+                console.error('Error storing message:', storeError);
             }
-        }
+            
+            // 2. Send push notifications to other members
+            // Get all members (users and consultants) from chat_members
+            const [members] = await pool.query(
+                'SELECT user_id, user_type FROM chat_members WHERE room_id = ? AND user_id != ?',
+                [channelId, message.user.id]
+            );
+
+            for (const member of members) {
+                // Determine which table to query based on user_type
+                const tableName = member.user_type === 'consultant' ? 'consultants' : 'users';
+                const [userRows] = await pool.query(`SELECT push_token FROM ${tableName} WHERE id = ?`, [member.user_id]);
+                
+                if (userRows.length && userRows[0].push_token) {
+                    await sendPushNotificationAsync(
+                        userRows[0].push_token,
+                        'New Chat Message',
+                        `${message.user.name}: ${message.text}`,
+                        { roomId: channelId, messageId: message.id }
+                    );
+                }
+            }
         }
 
         // Handle message.updated
@@ -172,9 +258,10 @@ export const handleStreamWebhook = async (req, res) => {
                 ]
             );
         }
+        
         res.json({ success: true });
     } catch (error) {
         console.error('Webhook error:', error);
-        res.status(500).json({ success: false });
+        res.status(500).json({ success: false, error: error.message });
     }
 };

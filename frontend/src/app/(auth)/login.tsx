@@ -44,7 +44,11 @@ const LoginScreen = () => {
                 if (response.user && response.user.role === 'consultant') {
                     router.replace("/(consultants)");
                 } else {
-                    router.replace("/(users)");
+                    if(response.user && response.user.role === 'user') {
+                        router.replace("/(users)");
+                    } else {
+                        router.replace("/(admin)");
+                    }
                 }
             } else {
                 Alert.alert('Login Failed', response.message);

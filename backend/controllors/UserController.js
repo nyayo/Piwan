@@ -66,28 +66,28 @@ export const consultant = async(req, res) => {
 
 export const consultants = async(req, res) => {
     try {
-        const response = await getConsultants();
+        const response = await getConsultants(req);
         if(response.success){
             return res.status(200).json(response); 
         }else {
             return res.status(400).json(response);
         }
     } catch (error) {
-        console.error('Consultant error:', error);
+        console.error('Consultants error:', error);
         res.status(500).json({ error: 'Failed to fetch consultants.' });
     }
 }
 
 export const users = async(req, res) => {
     try {
-        const response = await getUsers();
+        const response = await getUsers(req);
         if(response.success){
             return res.status(200).json(response); 
         }else {
             return res.status(400).json(response);
         }
     } catch (error) {
-        console.error('Consultant error:', error);
+        console.error('Users error:', error);
         res.status(500).json({ error: 'Failed to fetch users.' });
     }
 }
@@ -105,10 +105,10 @@ export const del_user = async(req, res) => {
             return res.status(400).json(response);
         }
     } catch (error) {
-        return {
+        return res.status(500).json({
             success: false,
             message: "Failed to delete user. Please try again later."
-        }
+        });
     }
 }
 
@@ -125,10 +125,10 @@ export const del_consultant = async(req, res) => {
             return res.status(400).json(response);
         }
     } catch (error) {
-        return {
+        return res.status(500).json({
             success: false,
-            message: "Failed to delete user. Please try again later."
-        }
+            message: "Failed to delete consultant. Please try again later."
+        });
     }
 }
 
@@ -139,7 +139,7 @@ export const prof_update = async(req, res) => {
     const fieldsToUpdate = { username, email, first_name, last_name, phone, profile_image };
     const hasValidFields = Object.values(fieldsToUpdate).some(field => field !== undefined && field !== null && field !== '');
     if (!hasValidFields) {
-        return { success: false, message: "At least one field is required to update." };
+        return res.status(400).json({ success: false, message: "At least one field is required to update." });
     }
 
     try {
@@ -152,10 +152,10 @@ export const prof_update = async(req, res) => {
             return res.status(400).json(response);
         }
     } catch (error) {
-        return {
+        return res.status(500).json({
             success: false,
-            message: "Failed to delete user. Please try again later."
-        }
+            message: "Failed to update profile. Please try again later."
+        });
     }
 }
 
@@ -290,6 +290,3 @@ export const updateNotificationPreference = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
-
-

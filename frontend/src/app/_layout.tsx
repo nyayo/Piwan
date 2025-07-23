@@ -1,4 +1,3 @@
-// app/_layout.tsx
 import { Stack } from "expo-router";
 import {
     DarkTheme,
@@ -13,6 +12,7 @@ import { ChatProvider } from "../context/ChatContext";
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler'; // ✅ IMPORT THIS
 
 // Set notification handler globally
 Notifications.setNotificationHandler({
@@ -26,8 +26,7 @@ Notifications.setNotificationHandler({
 
 function RootLayoutNav() {
     const { mode, COLORS } = useTheme();
-    
-    // Add loading state for theme initialization
+
     if (!COLORS || !COLORS.grey) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -35,16 +34,17 @@ function RootLayoutNav() {
             </View>
         );
     }
-    
-    // Set navigation theme based on mode
+
     const navTheme = mode === 'dark' ? DarkTheme : DefaultTheme;
-    
+
     return (
         <ThemeProvider value={navTheme}>
             <AuthProvider>
                 <UserProvider>
-                    <ConsultantProvider>           
+                    <ConsultantProvider> 
+                        <ChatProvider>
                             <Stack screenOptions={{ headerShown: false }} />
+                        </ChatProvider>          
                     </ConsultantProvider>
                 </UserProvider>
             </AuthProvider>
@@ -54,8 +54,10 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
     return (
-        <CustomThemeProvider>
-            <RootLayoutNav />
-        </CustomThemeProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}> {/* ✅ WRAP WITH THIS */}
+            <CustomThemeProvider>
+                <RootLayoutNav />
+            </CustomThemeProvider>
+        </GestureHandlerRootView>
     );
 }

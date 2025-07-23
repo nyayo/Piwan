@@ -4,7 +4,6 @@ import { sendPushNotificationToUser, sendPushNotificationToConsultant } from './
 // Cancel all expired appointments (pending/confirmed) whose start time is more than 15 minutes in the past (UTC)
 export const cancelExpiredAppointments = async () => {
     try {
-        // Get all pending/confirmed appointments
         const [appointments] = await pool.query(
             `SELECT id, appointment_datetime, user_id, consultant_id FROM appointments 
              WHERE status IN ('pending', 'confirmed')`
@@ -15,7 +14,6 @@ export const cancelExpiredAppointments = async () => {
         for (const appt of appointments) {
             const apptStart = new Date(appt.appointment_datetime);
             if (!isNaN(apptStart.getTime())) {
-                // Cancel if now > appointment start + 15 min
                 if (now > new Date(apptStart.getTime() + 15 * 60000)) {
                     expiredIds.push(appt.id);
                     expiredAppointments.push(appt);
@@ -27,7 +25,6 @@ export const cancelExpiredAppointments = async () => {
                 `UPDATE appointments SET status = 'cancelled', cancellation_reason = 'Missed/Expired', updated_at = CURRENT_TIMESTAMP WHERE id IN (?)`,
                 [expiredIds]
             );
-            // Send notifications to both user and consultant
             for (const appt of expiredAppointments) {
                 try {
                     await sendPushNotificationToUser(
@@ -63,19 +60,16 @@ export const createAppointment = async(appointment, user_id) => {
         }
 
         const durationInMinutes = appointment.duration_minutes || 90;
-        // appointment.appointment_datetime should be an ISO string in UTC
         const appointmentDateTime = new Date(appointment.appointment_datetime);
         if (isNaN(appointmentDateTime.getTime())) {
             return {success: false, message: "Invalid appointment_datetime"};
         }
-        // Use full ISO string (UTC) for MySQL DATETIME fields
         const appointmentDateTimeStr = appointmentDateTime.toISOString();
 
-        // Conflict check
         const [conflicts] = await pool.query(
             `SELECT id FROM appointments 
             WHERE consultant_id = ? 
-            AND status IN ('pending', 'confirmed') 
+            AND status IN ('pending', 'confirmed', 'in_session') 
             AND (
                 (appointment_datetime <= ? AND DATE_ADD(appointment_datetime, INTERVAL duration_minutes MINUTE) > ?)
                 OR
@@ -130,20 +124,18 @@ export const createAppointment = async(appointment, user_id) => {
     }
 }
 
-export const getAppointments = async(userId, userType, appointment = {}) => {
+export const getAppointments = async (userId, userType, appointment = {}) => {
     try {
-        // Cancel expired appointments before fetching
         await cancelExpiredAppointments();
 
         let query, params, countQuery, countParams;
 
-        // Base query construction with reviews join
         if (userType === 'user') {
             query = `
                 SELECT 
                     a.*, 
                     CONCAT(c.first_name, ' ', c.last_name) as consultant_name, 
-                    c.email asconsultantr_email, 
+                    c.email as consultant_email, 
                     c.phone as consultant_phone, 
                     c.profile_image, 
                     c.dob,
@@ -161,14 +153,14 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
             countQuery = `
                 SELECT COUNT(DISTINCT a.id) as total
                 FROM appointments a
-                LEFT JOIN consultants c ON a.user_id = c.id
+                LEFT JOIN consultants c ON a.consultant_id = c.id
                 LEFT JOIN reviews r ON a.id = r.appointment_id
-                WHERE a.consultant_id = ?
+                WHERE a.user_id = ?
             `;
             
             params = [userId];
             countParams = [userId];
-        } else {
+        } else if (userType === 'consultant') {
             query = `
                 SELECT 
                     a.*, 
@@ -198,71 +190,109 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
             
             params = [userId];
             countParams = [userId];
+        } else if (userType === 'admin') {
+            query = `
+                SELECT 
+                    a.*, 
+                    CONCAT(u.first_name, ' ', u.last_name) as user_name, 
+                    u.email as user_email, 
+                    u.phone as user_phone, 
+                    u.profile_image as user_profile_image, 
+                    u.dob as user_dob,
+                    u.gender as user_gender,
+                    CONCAT(c.first_name, ' ', c.last_name) as consultant_name, 
+                    c.email as consultant_email, 
+                    c.phone as consultant_phone, 
+                    c.profile_image as consultant_profile_image, 
+                    c.dob as consultant_dob,
+                    c.gender as consultant_gender,
+                    r.id as review_id,
+                    r.rating,
+                    r.review_text,
+                    r.created_at as review_date
+                FROM appointments a
+                LEFT JOIN users u ON a.user_id = u.id
+                LEFT JOIN consultants c ON a.consultant_id = c.id
+                LEFT JOIN reviews r ON a.id = r.appointment_id
+            `;
+            
+            countQuery = `
+                SELECT COUNT(DISTINCT a.id) as total
+                FROM appointments a
+                LEFT JOIN users u ON a.user_id = u.id
+                LEFT JOIN consultants c ON a.consultant_id = c.id
+                LEFT JOIN reviews r ON a.id = r.appointment_id
+            `;
+            
+            params = [];
+            countParams = [];
         }
 
-        // Add filters
+        // Apply filters (status, date filters, etc.)
         if (appointment.status) {
-            // Handle multiple statuses (comma-separated)
             const statuses = appointment.status.split(',').map(s => s.trim());
             const statusPlaceholders = statuses.map(() => '?').join(',');
-            
-            query += ` AND a.status IN (${statusPlaceholders})`;
-            countQuery += ` AND a.status IN (${statusPlaceholders})`;
-            
+            const statusCondition = ` ${userType === 'admin' ? 'WHERE' : 'AND'} a.status IN (${statusPlaceholders})`;
+            query += statusCondition;
+            countQuery += statusCondition;
             params.push(...statuses);
             countParams.push(...statuses);
         }
 
+        const hasWhere = userType !== 'admin' || appointment.status;
+
         if (appointment.date_from) {
-            query += ' AND a.appointment_datetime >= ?';
-            countQuery += ' AND a.appointment_datetime >= ?';
+            const dateCondition = ` ${hasWhere ? 'AND' : 'WHERE'} a.appointment_datetime >= ?`;
+            query += dateCondition;
+            countQuery += dateCondition;
             params.push(appointment.date_from);
             countParams.push(appointment.date_from);
         }
 
         if (appointment.date_to) {
-            query += ' AND a.appointment_datetime <= ?';
-            countQuery += ' AND a.appointment_datetime <= ?';
+            const dateCondition = ` ${hasWhere || appointment.date_from ? 'AND' : 'WHERE'} a.appointment_datetime <= ?`;
+            query += dateCondition;
+            countQuery += dateCondition;
             params.push(appointment.date_to);
             countParams.push(appointment.date_to);
         }
 
-        // Add date filter for exact day if provided
         if (appointment.date) {
-            query += ' AND DATE(a.appointment_datetime) = ?';
-            countQuery += ' AND DATE(a.appointment_datetime) = ?';
+            const dateCondition = ` ${hasWhere || appointment.date_from || appointment.date_to ? 'AND' : 'WHERE'} DATE(a.appointment_datetime) = ?`;
+            query += dateCondition;
+            countQuery += dateCondition;
             params.push(appointment.date);
             countParams.push(appointment.date);
         }
 
-        // Add filter for reviewed/unreviewed appointments
         if (appointment.reviewed === 'true') {
-            query += ' AND r.id IS NOT NULL';
-            countQuery += ' AND r.id IS NOT NULL';
+            const reviewCondition = ` ${hasWhere || appointment.date_from || appointment.date_to || appointment.date ? 'AND' : 'WHERE'} r.id IS NOT NULL`;
+            query += reviewCondition;
+            countQuery += reviewCondition;
         } else if (appointment.reviewed === 'false') {
-            query += ' AND r.id IS NULL';
-            countQuery += ' AND r.id IS NULL';
+            const reviewCondition = ` ${hasWhere || appointment.date_from || appointment.date_to || appointment.date ? 'AND' : 'WHERE'} r.id IS NULL`;
+            query += reviewCondition;
+            countQuery += reviewCondition;
         }
 
-        // Add ordering
         query += ' ORDER BY a.appointment_datetime DESC';
 
-        // Add pagination
         const page = parseInt(appointment.page) || 1;
-        const limit = parseInt(appointment.limit) || 10;
+        const limit = userType === 'admin' ? parseInt(appointment.limit) || 100 : parseInt(appointment.limit) || 10; // Higher default limit for admin
         const offset = (page - 1) * limit;
 
         query += ' LIMIT ? OFFSET ?';
         params.push(limit, offset);
 
-        // Execute queries
         const [appointments] = await pool.query(query, params);
         
         let total = 0;
-        if (appointment.include_total === 'true') {
+        if (appointment.include_total === 'true' || userType === 'admin') {
             const [countResult] = await pool.query(countQuery, countParams);
             total = countResult[0].total;
         }
+
+        console.log(appointments);
 
         const result = {
             success: true,
@@ -278,13 +308,11 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
             }
         };
 
-        // Include total in response if requested
-        if (appointment.include_total === 'true') {
+        if (appointment.include_total === 'true' || userType === 'admin') {
             result.total = total;
         }
 
         return result;
-        
     } catch (error) {
         console.error('Database error:', error);
         return {
@@ -292,8 +320,7 @@ export const getAppointments = async(userId, userType, appointment = {}) => {
             message: "Internal server Error"
         }
     }
-}
-
+};
 export const getConsultantAvailability = async (consultantId, dateFrom, dateTo) => {
     try {
         const query = `
@@ -301,7 +328,7 @@ export const getConsultantAvailability = async (consultantId, dateFrom, dateTo) 
             FROM appointments 
             WHERE consultant_id = ? 
             AND appointment_datetime BETWEEN ? AND ?
-            AND status IN ('confirmed', 'pending')
+            AND status IN ('confirmed', 'pending', 'in_session')
             ORDER BY appointment_datetime ASC
         `;
         
@@ -335,8 +362,15 @@ export const updateStatus = async(userId, userType, appointmentId, statusUpdate)
             return {success: false, message: "Not authorized to update this appointment"};
         }
 
-        if (userType === 'user' && statusUpdate.status !== 'cancelled') {
-            return {success: false, message: "Users can only cancel appointments"};
+        // Allow users to set status to 'cancelled' or 'in_session'
+        if (userType === 'user' && !['cancelled', 'in_session'].includes(statusUpdate.status)) {
+            return {success: false, message: "Users can only cancel appointments or start sessions"};
+        }
+
+        // Validate status
+        const validStatuses = ['pending', 'confirmed', 'in_session', 'cancelled', 'completed', 'rejected'];
+        if (!validStatuses.includes(statusUpdate.status)) {
+            return {success: false, message: "Invalid status"};
         }
 
         await pool.query(
@@ -344,25 +378,18 @@ export const updateStatus = async(userId, userType, appointmentId, statusUpdate)
             [statusUpdate.status, statusUpdate.cancellation_reason || null, appointmentId]
         );
 
-        // if (statusUpdate.status === 'completed' && appointment.status !== 'completed') {
-        //     await pool.query(
-        //         'UPDATE consultants SET total_appointments = total_appointments + 1 WHERE id = ?',
-        //         [appointment.consultant_id]
-        //     );
-        // }
-
         return {
             success: true,
             message: "Appointment status updated successfully"
         };
     } catch (error) {
+        console.error('Error updating appointment status:', error);
         return {success: false, message: "Internal server error"}
     }
 }
 
 export const consultantReview = async(userId, consultantId, review) => {
     try {
-        // Check if consultant exists
         const [consultants] = await pool.query(
             'SELECT * FROM consultants WHERE id = ?',
             [consultantId]
@@ -372,7 +399,6 @@ export const consultantReview = async(userId, consultantId, review) => {
             return {success: false, message: "Consultant not found"};
         }
 
-        // Check if user has already reviewed this consultant
         const [existingReviews] = await pool.query(
             'SELECT id FROM reviews WHERE consultant_id = ? AND user_id = ?',
             [consultantId, userId]
@@ -382,7 +408,6 @@ export const consultantReview = async(userId, consultantId, review) => {
             return {success: false, message: "Review already exists for this consultant"};
         }
 
-        // Optional: Check if user has had at least one completed appointment with this consultant
         const [completedAppointments] = await pool.query(
             'SELECT id FROM appointments WHERE user_id = ? AND consultant_id = ? AND status = "completed"',
             [userId, consultantId]
@@ -392,13 +417,11 @@ export const consultantReview = async(userId, consultantId, review) => {
             return {success: false, message: "You must have a completed appointment with this consultant to leave a review"};
         }
 
-        // Insert the review
         await pool.query(
             'INSERT INTO reviews (appointment_id, consultant_id, user_id, rating, review_text) VALUES (?, ?, ?, ?, ?)',
             [completedAppointments[0].id, consultantId, userId, review.rating, review.review_text || null]
         );
 
-        // Update consultant's average rating
         const [ratingData] = await pool.query(
             'SELECT AVG(rating) as avg_rating FROM reviews WHERE consultant_id = ?',
             [consultantId]
@@ -423,7 +446,6 @@ export const consultantReview = async(userId, consultantId, review) => {
 
 export const fetchConsultantReviewsPaginated = async (consultantId, page, limit, sortBy, sortOrder) => {
     try {
-        // First, verify the consultant exists
         const [consultantCheck] = await pool.query(
             'SELECT id, first_name, last_name FROM consultants WHERE id = ?',
             [consultantId]
@@ -436,10 +458,8 @@ export const fetchConsultantReviewsPaginated = async (consultantId, page, limit,
             };
         }
 
-        // Calculate offset
         const offset = (page - 1) * limit;
 
-        // Get total count
         const [totalCount] = await pool.query(
             'SELECT COUNT(*) as total FROM reviews WHERE consultant_id = ?',
             [consultantId]
@@ -448,7 +468,6 @@ export const fetchConsultantReviewsPaginated = async (consultantId, page, limit,
         const total = totalCount[0].total;
         const totalPages = Math.ceil(total / limit);
 
-        // Fetch paginated reviews
         const [reviews] = await pool.query(`
             SELECT 
                 r.id,
@@ -466,7 +485,6 @@ export const fetchConsultantReviewsPaginated = async (consultantId, page, limit,
             LIMIT ? OFFSET ?
         `, [consultantId, limit, offset]);
 
-        // Get average rating and statistics
         const [avgRating] = await pool.query(
             'SELECT AVG(rating) as avg_rating FROM reviews WHERE consultant_id = ?',
             [consultantId]
@@ -503,10 +521,8 @@ export const fetchConsultantReviewsPaginated = async (consultantId, page, limit,
     }
 }
 
-// Block a slot for a consultant (status: 'blocked', no patient_id)
 export const blockAppointmentSlot = async ({ consultant_id, appointment_datetime, duration_minutes = 90 }) => {
     try {
-        // Check for existing blocked slot at this time
         const [conflicts] = await pool.query(
             `SELECT id FROM appointments WHERE consultant_id = ? AND appointment_datetime = ? AND status = 'blocked'`,
             [consultant_id, appointment_datetime]
@@ -525,7 +541,6 @@ export const blockAppointmentSlot = async ({ consultant_id, appointment_datetime
     }
 };
 
-// Confirm a pending appointment (consultant only)
 export const confirmAppointment = async (consultantId, appointmentId) => {
     try {
         const [appointments] = await pool.query('SELECT * FROM appointments WHERE id = ?', [appointmentId]);
@@ -550,7 +565,6 @@ export const confirmAppointment = async (consultantId, appointmentId) => {
     }
 };
 
-// Reject a pending appointment (consultant only)
 export const rejectAppointment = async (consultantId, appointmentId) => {
     try {
         const [appointments] = await pool.query('SELECT * FROM appointments WHERE id = ?', [appointmentId]);
@@ -575,7 +589,6 @@ export const rejectAppointment = async (consultantId, appointmentId) => {
     }
 };
 
-// Reschedule an appointment (user or consultant)
 export const rescheduleAppointment = async (userId, userType, appointmentId, newDateTime) => {
     try {
         const [appointments] = await pool.query('SELECT * FROM appointments WHERE id = ?', [appointmentId]);
@@ -583,19 +596,17 @@ export const rescheduleAppointment = async (userId, userType, appointmentId, new
             return { success: false, message: "Appointment not found" };
         }
         const appointment = appointments[0];
-        // Only the consultant or user who owns the appointment can reschedule
         if (
             (userType === 'consultant' && appointment.consultant_id !== userId) ||
             (userType === 'user' && appointment.user_id !== userId)
         ) {
             return { success: false, message: "Not authorized to reschedule this appointment" };
         }
-        // Check for conflicts (reuse your conflict logic)
         const [conflicts] = await pool.query(
             `SELECT id FROM appointments 
              WHERE consultant_id = ? 
              AND id != ? 
-             AND status IN ('pending', 'confirmed') 
+             AND status IN ('pending', 'confirmed', 'in_session') 
              AND (
                 (appointment_datetime <= ? AND DATE_ADD(appointment_datetime, INTERVAL duration_minutes MINUTE) > ?)
                 OR
@@ -622,12 +633,10 @@ export const rescheduleAppointment = async (userId, userType, appointmentId, new
     }
 };
 
-// Get appointments starting in the next X minutes (for reminders)
 export const getUpcomingAppointments = async (minutesAhead = 15) => {
     try {
         const now = new Date();
         const future = new Date(now.getTime() + minutesAhead * 60000);
-        // Only fetch appointments that are not cancelled and not already started
         const [appointments] = await pool.query(
             `SELECT a.id, a.user_id, a.consultant_id, a.appointment_datetime, CONCAT(u.first_name, ' ', u.last_name) as user_name, CONCAT(c.first_name, ' ', c.last_name) as consultant_name
                 FROM appointments a

@@ -166,7 +166,7 @@ export default function AppointmentsScreen() {
 
       // Fetch upcoming appointments
       const upcomingFilters = {
-        status: 'pending,confirmed',
+        status: 'pending,confirmed,in_session',
         date_from: new Date().toISOString().split('T')[0] // today onwards
       };
       
@@ -292,17 +292,20 @@ export default function AppointmentsScreen() {
   const handleChat = async (appointment: Appointment) => {
     console.log('Starting chat with:', appointment.consultant_name);
     try {
-      // Call backend to create/get Stream channel for this appointment
       const channel = await createAppointmentChatRoom(appointment.id, appointment.consultant_id, appointment.user_id);
-      // Navigate to chat screen, passing channel info
+      console.log('Created channel response:', channel); // Log the response
+      if (!channel || !channel.room_id) {
+        throw new Error('Invalid channel response');
+      }
       router.push({
         pathname: '/(screens)/ChatRoomScreen',
         params: { 
-          channelId: channel.id, 
-          appointmentId: appointment.id 
+          roomId: channel.room_id,
+          roomName: channel.name || appointment.consultant_name || 'Chat Room'
         }
       });
     } catch (err) {
+      console.error('Error creating chat room:', err);
       Alert.alert('Error', 'Unable to start chat. Please try again.');
     }
   };

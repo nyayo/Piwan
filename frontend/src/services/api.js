@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure base URL (update with your backend URL)
-export const API_BASE_URL = 'https://62ef365cf31d.ngrok-free.app/api'; // Use your local IP
+export const API_BASE_URL = 'https://621dea604281.ngrok-free.app/api'; // Use your local IP
 // For development on physical device, use your computer's IP address
 // For iOS simulator: http://localhost:3000/api
 // For Android emulator: http://10.0.2.2:3000/api
@@ -173,8 +173,6 @@ export const loginUser = async (email, password) => {
     if (response.data.success && response.data.accessToken && response.data.refreshToken) {
       await storeAuthData(response.data.accessToken, response.data.refreshToken, response.data.user);
     }
-
-    console.log(response.data)
     
     return response.data;
   } catch (error) {
@@ -267,17 +265,67 @@ export const fetchConsultants = async (params = {}) => {
     // Add optional query parameters
     if (params.page) queryParams.append('page', params.page);
     if (params.limit) queryParams.append('limit', params.limit);
-    if (params.specialty) queryParams.append('specialty', params.specialty);
-    if (params.location) queryParams.append('location', params.location);
+    if (params.profession) queryParams.append('profession', params.profession);
+    // if (params.role) queryParams.append('role', params.role);
     if (params.search) queryParams.append('search', params.search);
     if (params.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
     
     const queryString = queryParams.toString();
     const endpoint = queryString ? `/users/consultants?${queryString}` : '/users/consultants';
+    console.log('Query: ', queryString)
+    console.log('E: nd', endpoint)
+    const response = await apiClient.get(endpoint);
+    console.log('Data: ', response.data)
+
+    
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+// Updated getUsers to support pagination, filtering, and sorting
+export const getUsers = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    // Add optional query parameters
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.role) queryParams.append('role', params.role);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/users/users?${queryString}` : '/users/users';
     
     const response = await apiClient.get(endpoint);
     
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const deleteUser = async (userId) => {
+  try {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+    const response = await apiClient.delete(`/users/delete/user/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+export const deleteConsultant = async (consultantId) => {
+  try {
+    if (!consultantId) {
+      throw new Error('Consultant ID is required');
+    }
+    const response = await apiClient.delete(`/users/delete/consultant/${consultantId}`);
     return response.data;
   } catch (error) {
     throw handleApiError(error);
@@ -309,7 +357,6 @@ export const getConsultantAppointments = async (consultantId, filters = {}) => {
     const url = `/appointments/consultant/${consultantId}${queryParams ? `?${queryParams}` : ''}`;
     
     const response = await apiClient.get(url);
-    console.log(response)
     
     return response.data;
   } catch (error) {
@@ -328,7 +375,6 @@ export const getUserAppointments = async (userId, filters = {}) => {
     const url = `/appointments/user/${userId}${queryParams ? `?${queryParams}` : ''}`;
     
     const response = await apiClient.get(url);
-    console.log('Patient Response: ', response)
     
     return response.data;
   } catch (error) {
@@ -434,7 +480,6 @@ export const cancelAppointment = async (appointment, cancelData) => {
     }
 };
 
-// Add this to your API service
 export const blockConsultantSlot = async ({ appointment_datetime, duration_minutes = 90 }) => {
   try {
     const response = await apiClient.post('/appointments/block', {
@@ -476,8 +521,20 @@ export const rescheduleAppointment = async (appointmentId, new_datetime) => {
     }
 };
 
+// Start an appointment session
+export const startSession = async (appointmentId) => {
+  try {
+    if (!appointmentId) {
+      throw new Error('Appointment ID is required');
+    }
+    const response = await apiClient.post(`/appointments/${appointmentId}/start-session`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
 // --- Mood Tracking API ---
-// Get the user's mood for a specific date (YYYY-MM-DD)
 export const getUserMood = async (date) => {
   try {
     const response = await apiClient.get(`/mood?date=${date}`);
@@ -512,7 +569,6 @@ export const uploadResource = async (resourceData) => {
 export const fetchResources = async () => {
   try {
     const response = await apiClient.get('/resources');
-    console.log('Resources; ', response)
     return response.data;
   } catch (error) {
     throw handleApiError(error);
@@ -569,7 +625,6 @@ export const sendPushNotificationToConsultant = async (consultantId, title, body
 export const fetchConsultantNotifications = async () => {
   try {
     const response = await apiClient.get('/users/consultant/notifications');
-    console.log('Notifications: ', response.data)
     return response.data.notifications;
   } catch (error) {
     throw handleApiError(error);
@@ -603,7 +658,6 @@ export const updateNotificationPreference = async (enabled) => {
 };
 
 // --- Chat API ---
-// Get Stream chat token for the current user
 export const generateChatToken = async () => {
   try {
     const response = await apiClient.get('/chat/token');
@@ -669,6 +723,17 @@ export const createAppointmentChatRoom = async (appointmentId, consultantId, use
       ]
     };
     const response = await apiClient.post('/chat/rooms', roomData);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+export const getAllAppointments = async (filters = {}) => {
+  try {
+    const queryParams = new URLSearchParams(filters).toString();
+    const url = queryParams ? `/appointments/all?${queryParams}` : '/appointments/all';
+    const response = await apiClient.get(url);
     return response.data;
   } catch (error) {
     throw handleApiError(error);

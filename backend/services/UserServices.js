@@ -20,13 +20,13 @@ export const getProfile = async(req) => {
             }
         }
 
-        if(!profile || profile === 0){
+        if(!profile || profile.length === 0){
             return {success: false, message: "User profile not found."}
         }
 
         return {
             success: true,
-            message: "User profile retrived.",
+            message: "User profile retrieved.",
             user: {
                 id: profile.id,
                 username: profile.username, 
@@ -45,13 +45,13 @@ export const getProfile = async(req) => {
 export const getUserDetails = async(req) => {
     try {
         const [users] = await pool.query(`
-        SELECT *
+        SELECT id, email, username, first_name, last_name, role, created_at
         FROM users 
         WHERE id = ?
         `, [req.params.id]);
 
         if (users.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
+            return { success: false, message: "User not found" };
         }
 
         const user = users[0];
@@ -61,7 +61,11 @@ export const getUserDetails = async(req) => {
             user: {
                 id: user.id,
                 email: user.email,
-                username: user.username
+                username: user.username,
+                first_name: user.first_name,
+                last_name: user.last_name,
+                role: user.role,
+                created_at: user.created_at
             }
         }
     } catch (error) {
@@ -75,51 +79,88 @@ export const getUserDetails = async(req) => {
 export const getConsultantDetails = async(req) => {
     try {
         const [consultants] = await pool.query(`
-        SELECT *
+        SELECT id, email, username, first_name, last_name, role, created_at
         FROM consultants 
         WHERE id = ?
         `, [req.params.id]);
 
         if (consultants.length === 0) {
-        return res.status(404).json({ error: 'Consultant not found' });
+            return { success: false, message: "Consultant not found" };
         }
 
-        const user = consultants[0];
+        const consultant = consultants[0];
         return {
             success: true,
-            message: "User details fetched.",
+            message: "Consultant details fetched.",
             consultant: {
-                id: user.id,
-                email: user.email,
-                username: user.username
+                id: consultant.id,
+                email: consultant.email,
+                username: consultant.username,
+                first_name: consultant.first_name,
+                last_name: consultant.last_name,
+                role: consultant.role,
+                created_at: consultant.created_at
             }
         }
     } catch (error) {
         return {
             success: false,
-            message: "Failed to fetch user data."
+            message: "Failed to fetch consultant data."
         }
     }
 }
 
-export const getConsultants = async() => {
+export const getConsultants = async(req) => {
     try {
-        const [consultants] = await pool.query(`
-        SELECT *
-        FROM consultants 
-        ORDER BY id DESC
-        `);
-
-        if (consultants.length === 0) {
-        return res.status(404).json({ error: 'Consultant not found' });
+        const { page = 1, limit = 10, profession, search, sortBy = 'id', sortOrder = 'DESC' } = req.query;
+        const offset = (page - 1) * limit;
+        
+        let query = `
+            SELECT id, email, username, first_name, last_name, role, created_at, profession, profile_image
+            FROM consultants
+        `;
+        const queryParams = [];
+        
+        const whereClauses = [];
+        if (profession) {
+            whereClauses.push('profession = ?');
+            queryParams.push(profession);
         }
-
+        if (search) {
+            whereClauses.push('(first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)');
+            const searchTerm = `%${search}%`;
+            queryParams.push(searchTerm, searchTerm, searchTerm);
+        }
+        
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
+        }
+        
+        query += ` ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`;
+        queryParams.push(Number(limit), Number(offset));
+        
+        const [consultants] = await pool.query(query, queryParams);
+        
+        const [countResult] = await pool.query(
+            `SELECT COUNT(*) as total FROM consultants${whereClauses.length > 0 ? ' WHERE ' + whereClauses.join(' AND ') : ''}`,
+            queryParams.slice(0, -2)
+        );
+        
+        const total = countResult[0].total;
+        
         return {
             success: true,
             message: "Fetched consultants",
-            consultants
+            consultants,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
         }
     } catch (error) {
+        console.log('Fetch Error: ', error)
         return {
             success: false,
             message: "Failed to fetch consultants data."
@@ -127,22 +168,54 @@ export const getConsultants = async() => {
     }
 }
 
-export const getUsers = async() => {
+export const getUsers = async(req) => {
     try {
-        const [users] = await pool.query(`
-        SELECT *
-        FROM users 
-        ORDER BY id DESC
-        `);
-
-        if (users.length === 0) {
-        return res.status(404).json({ error: 'Users not found' });
+        const { page = 1, limit = 10, role, search, sortBy = 'id', sortOrder = 'DESC' } = req.query;
+        const offset = (page - 1) * limit;
+        
+        let query = `
+            SELECT id, email, username, first_name, last_name, role, created_at, dob, profile_image, gender, updated_at
+            FROM users
+        `;
+        const queryParams = [];
+        
+        const whereClauses = [];
+        if (role) {
+            whereClauses.push('role = ?');
+            queryParams.push(role);
         }
-
+        if (search) {
+            whereClauses.push('(first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)');
+            const searchTerm = `%${search}%`;
+            queryParams.push(searchTerm, searchTerm, searchTerm);
+        }
+        
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
+        }
+        
+        query += ` ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`;
+        queryParams.push(Number(limit), Number(offset));
+        
+        const [users] = await pool.query(query, queryParams);
+        
+        const [countResult] = await pool.query(
+            `SELECT COUNT(*) as total FROM users${whereClauses.length > 0 ? ' WHERE ' + whereClauses.join(' AND ') : ''}`,
+            queryParams.slice(0, -2)
+        );
+        
+        const total = countResult[0].total;
+        
         return {
             success: true,
             message: "Fetched users",
-            users
+            users,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
         }
     } catch (error) {
         return {
@@ -159,12 +232,13 @@ export const deleteUser = async(req) => {
             return {success: false, message: "User not found"};
         }
         return {
-            success: "User deleted."
+            success: true,
+            message: "User deleted."
         };
     } catch (error) {
         return {
             success: false,
-            message: "Failed to delete users data."
+            message: "Failed to delete user data."
         }
     }
 }
@@ -176,7 +250,8 @@ export const deleteConsultant = async(req) => {
             return {success: false, message: "Consultant not found"};
         }
         return {
-            success: "Consultant deleted."
+            success: true,
+            message: "Consultant deleted."
         };
     } catch (error) {
         return {

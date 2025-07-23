@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../context/ThemeContext';
 import { convertToLocalDate, formatTime, toLocalDateTimeString } from '../helper/convertDateTime';
+import { startSession, updateStatus } from '../services/api'; // Import updateStatus
 const { width: screenWidth } = Dimensions.get('window');
 
 // Fix UpcomingType to include all used fields
@@ -14,6 +15,8 @@ export type UpcomingType = {
     profession: string;
     location: string;
     status: string;
+    user_id: number;
+    consultant_id: number;
     [key: string]: any;
 };
 
@@ -33,19 +36,14 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
     useEffect(() => {
         const checkChatAvailability = () => {
             const now = new Date();
-            // Use appointment_datetime if available, else fallback
             const appointmentDateTime = appointment.appointment_datetime ? new Date(appointment.appointment_datetime) : new Date(`${appointment.appointment_date} ${appointment.appointment_time}`);
             const fifteenMinutesBefore = new Date(appointmentDateTime.getTime() - 15 * 60 * 1000);
             const twoHoursAfter = new Date(appointmentDateTime.getTime() + 2 * 60 * 60 * 1000);
             setIsChatActive(now >= fifteenMinutesBefore && now <= twoHoursAfter);
         };
 
-        // Check immediately
         checkChatAvailability();
-
-        // Set up interval to check every minute
         const interval = setInterval(checkChatAvailability, 60000);
-
         return () => clearInterval(interval);
     }, [appointment.appointment_datetime, appointment.appointment_date, appointment.appointment_time]);
 
@@ -68,216 +66,226 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
         setCancellationReason('');
     };
 
-    const handleChatPress = () => {
+    const handleChatPress = async () => {
         // if (!isChatActive) {
         //     Alert.alert(
-        //         'Chat Not Available', 
+        //         'Chat Not Available',
         //         'Chat will be available 15 minutes before your appointment time.'
         //     );
         //     return;
         // }
-        
-        if (onChatPress) {
-            onChatPress(appointment);
+
+        try {
+            // Update appointment status to 'in_session'
+            const response = await startSession(appointment.id);
+            if (!response.success) {
+                Alert.alert('Error', response.message || 'Failed to start session');
+                return;
+            }
+
+            if (onChatPress) {
+                onChatPress(appointment);
+            }
+        } catch (error) {
+            console.error('Error starting session:', error);
+            Alert.alert('Error', 'Failed to start session. Please try again.');
         }
     };
 
     const isConfirmed = appointment.status === 'confirmed';
 
     const styles = StyleSheet.create({
-    carouselCard: {
-        backgroundColor: COLORS.cardBackground,
-        borderRadius: 20,
-        padding: 20,
-        marginRight: 16,
-        width: screenWidth - 80,
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 4,
-    },
-    cardHeader: {
-        marginBottom: 8,
-    },
-    statusBadge: {
-        backgroundColor: COLORS.border,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-        marginBottom: 8,
-    },
-    statusText: {
-        color: COLORS.white,
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    location: {
-        color: COLORS.white,
-        fontSize: 14,
-        opacity: 0.8,
-    },
-    dateTimeContainer: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        marginBottom: 20,
-        gap: 16,
-    },
-    appointmentDate: {
-        color: COLORS.white,
-        fontSize: 24,
-        fontWeight: '700',
-    },
-    appointmentTime: {
-        color: COLORS.white,
-        fontSize: 24,
-        fontWeight: '700',
-    },
-    doctorSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 20,
-        gap: 12,
-    },
-    doctorAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-    },
-    doctorInfo: {
-        flex: 1,
-    },
-    doctorName: {
-        color: COLORS.white,
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 2,
-    },
-    specialty: {
-        color: COLORS.white,
-        fontSize: 14,
-        opacity: 0.7,
-    },
-    // New Action Buttons Container
-    actionButtonsContainer: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    chatButton: {
-        flex: 1,
-        borderRadius: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    chatButtonActive: {
-        backgroundColor: '#4CAF50', // Green for active chat
-    },
-    chatButtonInactive: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    chatButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    chatButtonTextActive: {
-        color: COLORS.white,
-    },
-    chatButtonTextInactive: {
-        color: COLORS.textLight,
-    },
-    cancelButton: {
-        backgroundColor: '#FF4444',
-        borderRadius: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    cancelButtonText: {
-        color: COLORS.white,
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    // Modal Styles
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    modalContainer: {
-        backgroundColor: COLORS.white,
-        borderRadius: 16,
-        width: '100%',
-        maxWidth: 400,
-        padding: 24,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: COLORS.textDark,
-    },
-    modalSubtitle: {
-        fontSize: 16,
-        color: COLORS.textDark,
-        marginBottom: 20,
-        lineHeight: 22,
-    },
-    reasonInput: {
-        borderWidth: 1,
-        borderColor: COLORS.lightGrey,
-        borderRadius: 12,
-        padding: 16,
-        fontSize: 16,
-        color: COLORS.textDark,
-        minHeight: 100,
-        marginBottom: 24,
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    modalCancelButton: {
-        flex: 1,
-        backgroundColor: COLORS.lightGrey,
-        borderRadius: 12,
-        paddingVertical: 14,
-        alignItems: 'center',
-    },
-    modalCancelButtonText: {
-        color: COLORS.textDark,
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    modalConfirmButton: {
-        flex: 1,
-        backgroundColor: '#FF4444',
-        borderRadius: 12,
-        paddingVertical: 14,
-        alignItems: 'center',
-    },
-    modalConfirmButtonText: {
-        color: COLORS.white,
-        fontSize: 16,
-        fontWeight: '600',
-    },
-})
+        carouselCard: {
+            backgroundColor: COLORS.cardBackground,
+            borderRadius: 20,
+            padding: 20,
+            marginRight: 16,
+            width: screenWidth - 80,
+            shadowColor: COLORS.shadow,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 4,
+        },
+        cardHeader: {
+            marginBottom: 8,
+        },
+        statusBadge: {
+            backgroundColor: COLORS.border,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 8,
+            alignSelf: 'flex-start',
+            marginBottom: 8,
+        },
+        statusText: {
+            color: COLORS.white,
+            fontSize: 12,
+            fontWeight: '600',
+        },
+        location: {
+            color: COLORS.white,
+            fontSize: 14,
+            opacity: 0.8,
+        },
+        dateTimeContainer: {
+            flexDirection: 'row',
+            alignItems: 'baseline',
+            marginBottom: 20,
+            gap: 16,
+        },
+        appointmentDate: {
+            color: COLORS.white,
+            fontSize: 24,
+            fontWeight: '700',
+        },
+        appointmentTime: {
+            color: COLORS.white,
+            fontSize: 24,
+            fontWeight: '700',
+        },
+        doctorSection: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 20,
+            gap: 12,
+        },
+        doctorAvatar: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+        },
+        doctorInfo: {
+            flex: 1,
+        },
+        doctorName: {
+            color: COLORS.white,
+            fontSize: 16,
+            fontWeight: '600',
+            marginBottom: 2,
+        },
+        specialty: {
+            color: COLORS.white,
+            fontSize: 14,
+            opacity: 0.7,
+        },
+        actionButtonsContainer: {
+            flexDirection: 'row',
+            gap: 12,
+        },
+        chatButton: {
+            flex: 1,
+            borderRadius: 12,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+        },
+        chatButtonActive: {
+            backgroundColor: '#4CAF50',
+        },
+        chatButtonInactive: {
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+        },
+        chatButtonText: {
+            fontSize: 16,
+            fontWeight: '600',
+        },
+        chatButtonTextActive: {
+            color: COLORS.white,
+        },
+        chatButtonTextInactive: {
+            color: COLORS.textLight,
+        },
+        cancelButton: {
+            backgroundColor: '#FF4444',
+            borderRadius: 12,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+        },
+        cancelButtonText: {
+            color: COLORS.white,
+            fontSize: 16,
+            fontWeight: '600',
+        },
+        modalOverlay: {
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20,
+        },
+        modalContainer: {
+            backgroundColor: COLORS.white,
+            borderRadius: 16,
+            width: '100%',
+            maxWidth: 400,
+            padding: 24,
+        },
+        modalHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+        },
+        modalTitle: {
+            fontSize: 20,
+            fontWeight: '700',
+            color: COLORS.textDark,
+        },
+        modalSubtitle: {
+            fontSize: 16,
+            color: COLORS.textDark,
+            marginBottom: 20,
+            lineHeight: 22,
+        },
+        reasonInput: {
+            borderWidth: 1,
+            borderColor: COLORS.lightGrey,
+            borderRadius: 12,
+            padding: 16,
+            fontSize: 16,
+            color: COLORS.textDark,
+            minHeight: 100,
+            marginBottom: 24,
+        },
+        modalButtons: {
+            flexDirection: 'row',
+            gap: 12,
+        },
+        modalCancelButton: {
+            flex: 1,
+            backgroundColor: COLORS.lightGrey,
+            borderRadius: 12,
+            paddingVertical: 14,
+            alignItems: 'center',
+        },
+        modalCancelButtonText: {
+            color: COLORS.textDark,
+            fontSize: 16,
+            fontWeight: '600',
+        },
+        modalConfirmButton: {
+            flex: 1,
+            backgroundColor: '#FF4444',
+            borderRadius: 12,
+            paddingVertical: 14,
+            alignItems: 'center',
+        },
+        modalConfirmButtonText: {
+            color: COLORS.white,
+            fontSize: 16,
+            fontWeight: '600',
+        },
+    })
 
     return (
         <>
@@ -285,7 +293,7 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
                 <View style={styles.cardHeader}>
                     <View style={styles.statusBadge}>
                         <Text style={styles.statusText}>
-                            {isConfirmed ? 'CONFIRMED' : 'PENDING'}
+                            {appointment.status === 'in_session' ? 'IN SESSION' : isConfirmed ? 'CONFIRMED' : 'PENDING'}
                         </Text>
                     </View>
                     <Text style={styles.location}>{appointment.location}</Text>
@@ -304,7 +312,6 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
                     </View>
                 </View>
                 
-                {/* Action Buttons */}
                 <View style={styles.actionButtonsContainer}>
                     {isConfirmed && (
                         <TouchableOpacity 
@@ -341,7 +348,6 @@ const CarouselCard = ({ appointment, onCancelPress, onChatPress }: CarouselCardP
                 </View>
             </View>
 
-            {/* Custom Cancel Modal */}
             <Modal
                 visible={showCancelModal}
                 transparent={true}

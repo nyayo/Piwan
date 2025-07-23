@@ -16,44 +16,6 @@ export const useChatContext = () => {
     return context;
 };
 
-// Internal component that wraps children with Stream Chat components
-const StreamChatWrapper = ({ children, client, user, isConnected, loading, error }) => {
-    if (loading) {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" />
-                <Text style={{ marginTop: 10 }}>Connecting to chat...</Text>
-            </View>
-        );
-    }
-
-    if (error) {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ color: 'red', textAlign: 'center' }}>
-                    Chat Error: {error}
-                </Text>
-            </View>
-        );
-    }
-
-    if (!isConnected || !client) {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <Text>Chat not connected</Text>
-            </View>
-        );
-    }
-
-    return (
-        <OverlayProvider>
-            <Chat client={client}>
-                {children}
-            </Chat>
-        </OverlayProvider>
-    );
-};
-
 export const ChatProvider = ({ children }) => {
     const [client, setClient] = useState(null);
     const [user, setUser] = useState(null);
@@ -189,17 +151,46 @@ export const ChatProvider = ({ children }) => {
         getUserRooms
     };
 
+    // Show loading state
+    if (loading) {
+        return (
+            <ChatContext.Provider value={value}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" />
+                    <Text style={{ marginTop: 10 }}>Connecting to chat...</Text>
+                </View>
+            </ChatContext.Provider>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <ChatContext.Provider value={value}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ color: 'red', textAlign: 'center' }}>
+                        Chat Error: {error}
+                    </Text>
+                </View>
+            </ChatContext.Provider>
+        );
+    }
+
+    // Show not connected state
+    // if (!isConnected || !client) {
+    //     return (
+    //         <ChatContext.Provider value={value}>
+    //             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    //                 <Text>hat not connected</Text>
+    //             </View>
+    //         </ChatContext.Provider>
+    //     );
+    // }
+
+    // Only render OverlayProvider when we have a connected client
     return (
         <ChatContext.Provider value={value}>
-            <StreamChatWrapper
-                client={client}
-                user={user}
-                isConnected={isConnected}
-                loading={loading}
-                error={error}
-            >
-                {children}
-            </StreamChatWrapper>
+            {children}
         </ChatContext.Provider>
     );
 };

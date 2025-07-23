@@ -2,13 +2,13 @@ import { Tabs } from "expo-router";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Text } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
-import { ChatProvider } from "../../context/ChatContext";
 
-export default function TabsLayout() {
+
+export default function UsersLayout() {
     const { COLORS } = useTheme();
+
     return (
-        <ChatProvider>
-            <Tabs screenOptions={{
+        <Tabs screenOptions={{
             tabBarActiveTintColor: COLORS.primary,
             tabBarStyle: {
                 backgroundColor: COLORS.background,
@@ -77,7 +77,7 @@ export default function TabsLayout() {
                 }} 
                 /> 
             </Tabs>
-        </ChatProvider>
     );
 }
+
 

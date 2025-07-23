@@ -11,7 +11,7 @@ const COLOR_THEMES = {
             background: "#ffffff",
             cardBackground: "#f5f9ff",
             inputBackground: "#f0f8ff",
-            border: "#bbdefb",
+            border: "#f1f1f1",
             white: "#ffffff",
             black: "#000000",
             grey: "#808080",

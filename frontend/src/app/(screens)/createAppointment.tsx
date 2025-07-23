@@ -461,7 +461,7 @@ export default function AppointmentScheduleScreen() {
                 text: 'OK',
                 onPress: () => {
                   fetchConsultantAppointments();
-                  router.push("/(tabs)/schedule");
+                  router.push("/(users)/schedule");
                 }
               }
             ]

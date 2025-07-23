@@ -49,14 +49,27 @@ export class StreamChatService {
 
     static async createOrUpdateStreamUser(userId, userType = 'user') {
         try {
-            // Get user data from your database
-            const [userRows] = await pool.query(
-                'SELECT id, username, first_name, last_name, profile_image, email FROM users WHERE id = ?',
-                [userId]
-            );
+            let userRows = null;
+            // Get user data from your database based on userType
+            if(userType === 'user') {
+                [userRows] = await pool.query(
+                    'SELECT id, username, first_name, last_name, profile_image, email FROM users WHERE id = ?',
+                    [userId]
+                );
+            } else if(userType === 'consultant') {
+                [userRows] = await pool.query(
+                    'SELECT id, username, first_name, last_name, profile_image, email FROM consultants WHERE id = ?',
+                    [userId]
+                );
+            } else if(userType === 'admin') {
+                [userRows] = await pool.query(
+                    'SELECT id, username, first_name, last_name, profile_image, email FROM admin WHERE id = ?',
+                    [userId]
+                );
+            }
             
-            if (userRows.length === 0) {
-                throw new Error(`User with ID ${userId} not found in database`);
+            if (!userRows || userRows.length === 0) {
+                throw new Error(`${userType} with ID ${userId} not found in database`);
             }
             
             const user = userRows[0];
@@ -101,23 +114,39 @@ export class StreamChatService {
     }
 
     static async storeMessage(messageData) {
-        const {
-            id, room_id, user_id, user_type, message_type, text,
-            attachments, mentioned_users, parent_id, thread_participants,
-            reaction_counts, reply_count, stream_message_id
-        } = messageData;
-        await pool.query(`
-            INSERT INTO chat_messages (
-                id, room_id, user_id, user_type, message_type, text, 
-                attachments, mentioned_users, parent_id, thread_participants, 
+        console.log('Attempting to store message:', messageData);
+        
+        try {
+            const {
+                id, room_id, user_id, user_type, message_type, text,
+                attachments, mentioned_users, parent_id, thread_participants,
                 reaction_counts, reply_count, stream_message_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-            id, room_id, user_id, user_type, message_type || 'regular', text,
-            JSON.stringify(attachments || []), JSON.stringify(mentioned_users || []),
-            parent_id, JSON.stringify(thread_participants || []),
-            JSON.stringify(reaction_counts || {}), reply_count || 0, stream_message_id
-        ]);
+            } = messageData;
+            
+            // Validate required fields
+            if (!id || !room_id || !user_id) {
+                throw new Error('Missing required fields: id, room_id, or user_id');
+            }
+            
+            const result = await pool.query(`
+                INSERT INTO chat_messages (
+                    id, room_id, user_id, user_type, message_type, text, 
+                    attachments, mentioned_users, parent_id, thread_participants, 
+                    reaction_counts, reply_count, stream_message_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                id, room_id, user_id, user_type, message_type || 'regular', text,
+                JSON.stringify(attachments || []), JSON.stringify(mentioned_users || []),
+                parent_id, JSON.stringify(thread_participants || []),
+                JSON.stringify(reaction_counts || {}), reply_count || 0, stream_message_id
+            ]);
+            
+            console.log('Message stored successfully:', result);
+            return result;
+        } catch (error) {
+            console.error('Error storing message:', error);
+            throw error;
+        }
     }
 
     static async getRoomMessages(roomId, limit = 50, before = null) {
@@ -149,6 +178,25 @@ export class StreamChatService {
             ORDER BY cr.updated_at DESC
         `, [userId, userType]);
         return rooms;
+    }
+
+    static async setupChannelWebhook(channelId) {
+        try {
+            const channel = serverClient.channel('messaging', channelId);
+            
+            // Enable events for this channel
+            await channel.update({
+                webhook_events: [
+                    'message.new',
+                    'message.updated',
+                    'message.deleted',
+                    'reaction.new',
+                    'reaction.deleted'
+                ]
+            });
+        } catch (error) {
+            console.error('Error setting up channel webhook:', error);
+        }
     }
 
     static setupWebhookHandlers() {

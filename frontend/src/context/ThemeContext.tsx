@@ -9,11 +9,11 @@ export const useTheme = () => useContext(ThemeContext);
 export const ThemeProvider = ({ children }) => {
     const systemColorScheme = Appearance.getColorScheme();
     const [themeName, setThemeName] = useState('blue');
-    const [mode, setMode] = useState(systemColorScheme || 'light');
+    const [mode, setMode] = useState<'light' | 'dark'>(systemColorScheme ?? 'light');
 
     useEffect(() => {
         const listener = Appearance.addChangeListener(({ colorScheme }) => {
-        setMode(colorScheme);
+        setMode(colorScheme ?? 'light');
         });
         return () => listener.remove();
     }, []);
