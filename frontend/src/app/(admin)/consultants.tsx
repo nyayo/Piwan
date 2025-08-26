@@ -6,6 +6,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/authContext';
 import { fetchConsultants, updateUserProfile, deleteConsultant } from '../../services/api';
 import { Table, TableWrapper, Row, Cell } from 'react-native-table-component';
+import { useNavigation } from '@react-navigation/native';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -42,6 +44,7 @@ const ConsultantManagementScreen = () => {
     primaryLight: '#4da8ff',
     error: '#FF3B30'
   }, mode } = useTheme();
+  const navigation = useNavigation<DrawerNavigationProp<any>>();
   const auth = useAuth() as AuthContext;
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [filteredConsultants, setFilteredConsultants] = useState<Consultant[]>([]);
@@ -270,11 +273,19 @@ const ConsultantManagementScreen = () => {
       paddingHorizontal: 20,
       paddingVertical: 20,
     },
+    headerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    menuButton: {
+      marginRight: 16,
+      padding: 4,
+    },
     headerTitle: {
       fontSize: 24,
       fontWeight: 'bold',
       color: COLORS.textDark,
-      marginBottom: 16,
     },
     searchContainer: {
       flexDirection: 'row',
@@ -468,7 +479,15 @@ const ConsultantManagementScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Consultant Management</Text>
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            onPress={() => navigation.toggleDrawer()}
+            style={styles.menuButton}
+          >
+            <Ionicons name="menu-outline" size={24} color={COLORS.textDark} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Consultant Management</Text>
+        </View>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
           <TextInput

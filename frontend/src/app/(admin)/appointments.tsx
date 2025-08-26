@@ -2,12 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Dimensions, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/authContext';
 import { getAllAppointments, deleteAppointment } from '../../services/api';
 import { Table, TableWrapper, Row, Cell } from 'react-native-table-component';
 
 const { width: screenWidth } = Dimensions.get('window');
+
+type RootDrawerParamList = {
+  '/(admin)/profile': undefined;
+};
+
+type AdminDrawerNavigationProp = DrawerNavigationProp<RootDrawerParamList>;
 
 interface Appointment {
   id: string | number;
@@ -200,6 +208,32 @@ const AppointmentsScreen = () => {
     '' // Actions (handled in renderCell)
   ]);
 
+  const navigation = useNavigation<AdminDrawerNavigationProp>();
+
+  const renderCustomHeader = () => {
+    return (
+      <View style={styles.customHeader}>
+        <TouchableOpacity onPress={() => navigation.openDrawer()}>
+          <Ionicons name="menu" size={28} color={COLORS.textDark} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Appointments</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.headerButton} 
+            onPress={() => navigation.navigate('/(admin)/profile')}
+          >
+            <View style={styles.headerAvatar}>
+              <Image 
+                source={{ uri: auth.user?.profile_image }} 
+                style={styles.headerProfileImage}
+              />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
 const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -209,11 +243,19 @@ const styles = StyleSheet.create({
       paddingHorizontal: 20,
       paddingVertical: 20,
     },
+    headerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    menuButton: {
+      marginRight: 16,
+      padding: 4,
+    },
     headerTitle: {
       fontSize: 24,
       fontWeight: 'bold',
       color: COLORS.textDark,
-      marginBottom: 16,
     },
     searchContainer: {
       flexDirection: 'row',
@@ -423,7 +465,15 @@ const styles = StyleSheet.create({
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Appointments</Text>
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            onPress={() => navigation.toggleDrawer()}
+            style={styles.menuButton}
+          >
+            <Ionicons name="menu-outline" size={24} color={COLORS.textDark} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Appointment Management</Text>
+        </View>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
           <TextInput
