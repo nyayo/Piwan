@@ -10,6 +10,8 @@ import {
   Modal,
   Animated,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ProfileOption from '../../components/ProfileOption';
@@ -25,6 +27,7 @@ export default function ProfileScreen() {
   const {COLORS} = useTheme();
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const navigation = useNavigation<DrawerNavigationProp<any>>();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -88,6 +91,19 @@ export default function ProfileScreen() {
     },
     profileSection: {
       alignItems: 'center',
+      position: 'relative',
+    },
+    backButton: {
+      position: 'absolute',
+      top: 30,
+      left: 20,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1,
     },
     profileInfo: {
       marginHorizontal: 22,
@@ -261,6 +277,12 @@ export default function ProfileScreen() {
         source={{ uri: user?.profile_image || undefined }}
         blurRadius={8}
         />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+        </TouchableOpacity>
         <Image 
           style={styles.avatar} 
           source={{uri: user?.profile_image || undefined}} 

@@ -285,6 +285,7 @@ export const updateNotificationPreference = async (req, res) => {
         } else {
             result = await updateUserNotificationPreference(userId, enabled);
         }
+        console.log('Notification preference updated:', { userId, role, enabled });
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

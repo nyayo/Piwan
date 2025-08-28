@@ -8,11 +8,14 @@ import {
   Dimensions,
   Alert,
   Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LineChart } from 'react-native-chart-kit';
 import { useTheme } from '../../context/ThemeContext';
+import { useNavigation } from '@react-navigation/native';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
 import {
   getUserAppointments,
   fetchResources,
@@ -28,20 +31,53 @@ import {
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - 60) / 2;
 
+interface Appointment {
+  appointment_datetime: string;
+  duration_minutes?: number;
+  status: 'pending' | 'cancelled' | 'confirmed' | 'in_session' | 'completed';
+  title?: string;
+}
+
+interface Resource {
+  title: string;
+  type: string;
+}
+
+interface User {
+  profile_image?: string;
+}
+
+interface CalendarDay {
+  day: number;
+  isOtherMonth: boolean;
+}
+
+interface AnalyticsItem {
+  name: string;
+  value: number;
+}
+
+type RootDrawerParamList = {
+  '/(admin)/profile': undefined;
+};
+
+type AdminDrawerNavigationProp = DrawerNavigationProp<RootDrawerParamList>;
+
 const DashboardScreen = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [appointments, setAppointments] = useState([]);
-  const [resources, setResources] = useState([]);
-  const [analyticsData, setAnalyticsData] = useState([]);
-  const [chatRooms, setChatRooms] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [consultants, setConsultants] = useState([]);
-  const [reviews, setReviews] = useState([]);
-  const { COLORS } = useTheme();
-  const [user, setUser] = useState(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsItem[]>([]);
+  const [chatRooms, setChatRooms] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [consultants, setConsultants] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const navigation = useNavigation<AdminDrawerNavigationProp>();
+  const { COLORS } = useTheme() as { COLORS: any };
+  const [user, setUser] = useState<User | null>(null);
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -198,39 +234,39 @@ const DashboardScreen = () => {
     }
   };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerTop}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color={COLORS.textSecondary} />
-          <Text style={styles.searchPlaceholder}>Search...</Text>
-        </View>
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-          <Ionicons
-            name="refresh"
-            size={20}
-            color={COLORS.primary}
-            style={[refreshing && { transform: [{ rotate: '180deg' }] }]}
-          />
-          <Text style={styles.refreshText}>Refresh dashboard</Text>
+  const renderCustomHeader = () => {
+    const navigation = useNavigation();
+    return (
+      <View style={styles.customHeader}>
+        <TouchableOpacity onPress={() => navigation.openDrawer()}>
+          <Ionicons name="menu" size={28} color={COLORS.textDark} />
         </TouchableOpacity>
-      </View>
-      <View style={styles.headerBottom}>
-        <View style={styles.userSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>AD</Text>
-          </View>
-          <Text style={styles.userName}>Admin</Text>
+        <Text style={styles.headerTitle}>Dashboard</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.headerButton} 
+            onPress={handleRefresh}
+          >
+            <Ionicons
+              name="refresh"
+              size={24}
+              color={COLORS.textDark}
+              style={[refreshing && { transform: [{ rotate: '180deg' }] }]}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerAvatar}
+            onPress={() => navigation.navigate('/(admin)/profile')}
+          >
+            <Image 
+              source={{ uri: user?.profile_image }} 
+              style={styles.headerProfileImage}
+            />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.notificationBadge}>
-          <Ionicons name="notifications" size={20} color={COLORS.textSecondary} />
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{appointments.length}</Text>
-          </View>
-        </TouchableOpacity>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderAppointmentAnalytics = () => {
   const chartData = {
@@ -341,7 +377,7 @@ const DashboardScreen = () => {
     const [activeIndex, setActiveIndex] = useState(0);
     const metricsCount = 9;
 
-    const handleScroll = (event) => {
+    const handleScroll = (event: { nativeEvent: { contentOffset: { x: number } } }) => {
       const scrollX = event.nativeEvent.contentOffset.x;
       const index = Math.round(scrollX / (cardWidth + 15));
       setActiveIndex(index);
@@ -555,7 +591,7 @@ const DashboardScreen = () => {
         </ScrollView>
         <View style={styles.pagination}>
           {Array(metricsCount)
-            .fill()
+            .fill(0)
             .map((_, index) => (
               <View
                 key={index}
@@ -602,7 +638,7 @@ const DashboardScreen = () => {
   const [selectedDayAppointments, setSelectedDayAppointments] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const getDayStatusColor = (day) => {
+  const getDayStatusColor = (day: CalendarDay): string | null => {
     const matchingAppointments = appointments.filter((appt) => {
       const apptDate = new Date(appt.appointment_datetime);
       // Match only if the appointment is in the selected month and year
@@ -639,7 +675,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const handleDayPress = (dayObj) => {
+  const handleDayPress = (dayObj: CalendarDay): void => {
     if (!dayObj.isOtherMonth) {
       setSelectedDate(dayObj.day);
       const dayAppointments = appointments.filter((appt) => {
@@ -816,17 +852,55 @@ const DashboardScreen = () => {
       flexGrow: 1,
       paddingBottom: 20,
     },
-    header: {
-      padding: 20,
+    customHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
       backgroundColor: COLORS.background,
       borderBottomWidth: 1,
       borderBottomColor: COLORS.border,
     },
-    headerTop: {
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: COLORS.textDark,
+    },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    headerButton: {
+      padding: 4,
+    },
+    headerAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      overflow: 'hidden',
+      backgroundColor: COLORS.cardBackground,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    headerProfileImage: {
+      width: '100%',
+      height: '100%',
+    },
+    subHeader: {
+      padding: 16,
+      backgroundColor: COLORS.background,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+    },
+    searchRefreshContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 15,
+      marginBottom: 12,
+    },
+    notificationContainer: {
+      alignItems: 'flex-end',
     },
     searchContainer: {
       flexDirection: 'row',
@@ -1298,7 +1372,7 @@ legendText: {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {renderHeader()}
+      {renderCustomHeader()}
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           {renderAppointmentAnalytics()}

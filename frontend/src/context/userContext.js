@@ -101,6 +101,7 @@ export const UserProvider = ({ children }) => {
             setLoading(true);
 
             const response = await fetchConsultants(params);
+            console.log('Fetched consultants:', response);
 
             if (response.success) {
                 console.log(response.consultants)
@@ -124,7 +125,7 @@ export const UserProvider = ({ children }) => {
         }
         };
 
-        const getConsultant = async (consultantId) => {
+        const getConsultant = async (consultantId) => { 
             try {
                 setLoading(true);
 
