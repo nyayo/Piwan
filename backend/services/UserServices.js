@@ -116,7 +116,7 @@ export const getConsultants = async(req) => {
         const offset = (page - 1) * limit;
         
         let query = `
-            SELECT id, email, username, first_name, last_name, role, created_at, profession, profile_image
+            SELECT *
             FROM consultants
         `;
         const queryParams = [];

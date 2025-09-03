@@ -1,9 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL as api } from '@env';
-
+import {API_BASE_URL as api_url} from '@env';
 // Configure base URL (update with your backend URL)
-export const API_BASE_URL = api; // Use your local IP
+export const API_BASE_URL = "https://a1537f503139.ngrok-free.app/api"; // Use your local IP
 // For development on physical device, use your computer's IP address
 // For iOS simulator: http://localhost:3000/api
 // For Android emulator: http://10.0.2.2:3000/api
@@ -13,7 +12,7 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json',  
   },
 });
 

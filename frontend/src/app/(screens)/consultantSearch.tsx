@@ -49,7 +49,7 @@ useEffect(() => {
     getConsultants();
 }, []);
 
-// console.log(consultants)
+console.log("Consultants: ", consultants)
 
 const toggleFavorite = (id: number) => {
     const newFavorites = new Set(favorites);
@@ -72,7 +72,12 @@ const renderTimeSlot = (timeSlot: string, index : number) => (
 );
 
 const renderPractitioner = (consultant) => {    
-    const times = generateTimeSlots(consultant.available_from, consultant.available_to, 90);
+    const times = consultant.available_from && consultant.available_to 
+        ? generateTimeSlots(consultant.available_from, consultant.available_to, 90)
+        : [];
+
+        console.log("Available from: ", consultant.available_from);
+        console.log("Available to: ", consultant.available_to);
 
     return (
         <Pressable 

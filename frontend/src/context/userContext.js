@@ -122,7 +122,7 @@ export const UserProvider = ({ children }) => {
             return { success: false, message: error.message || 'Failed to fetch consultants' };
         } finally {
             setLoading(false);
-        }
+        } 
         };
 
         const getConsultant = async (consultantId) => { 
