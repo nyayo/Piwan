@@ -17,28 +17,13 @@ import { widths } from '@tamagui/config';
 import { router, useNavigation } from 'expo-router';
 import { useUser } from '../../context/userContext';
 import { useConsultant } from '../../context/consultantContext';
-import generateTimeSlots from '../../helper/timeSlot';
 
-const COLORS = {
-primary: "#1976D2",
-textPrimary: "#1a4971",
-textSecondary: "#6d93b8",
-textDark: "#0d2b43",
-placeholderText: "#767676",
-background: "#e3f2fd",
-cardBackground: "#f5f9ff",
-inputBackground: "#f0f8ff",
-border: "#bbdefb",
-white: "#ffffff",
-black: "#000000",
-grey: "#808080",
-lightGrey: "#f1f1f1",
-error: "#FF4444",
-primaryLight: "#E6F0FA"
-};
+import generateTimeSlots from '../../helper/timeSlot';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function SearchScreen() {
     const {consultants, getConsultants} = useUser();
+    const { COLORS } = useTheme();
     const { selectConsultant } = useConsultant();
     const {width} = useWindowDimensions();
 const [searchQuery, setSearchQuery] = useState('');
@@ -142,53 +127,6 @@ const renderPractitioner = (consultant) => {
     );
 };
 
-return (
-    <SafeAreaView style={styles.container}>
-    <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-    
-    {/* Custom Header */}
-    <View style={styles.header}>
-        <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={24} color={COLORS.white || '#333'} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>General consultants</Text>
-        </View>
-    </View>
-    <ScrollView style={styles.scrollView}>
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-            <View style={styles.searchInputContainer}>
-                <Ionicons 
-                name="search" 
-                size={21} 
-                color={COLORS.placeholderText} 
-                style={styles.searchIcon}
-                />
-                <TextInput
-                style={styles.searchInput}
-                placeholder="Search"
-                placeholderTextColor={COLORS.placeholderText}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-                enterKeyHint='search'
-                />
-            </View>
-            <TouchableOpacity style={styles.filterButton}>
-                <Ionicons name="options" size={21} color={COLORS.placeholderText} />
-            </TouchableOpacity>
-        </View>
-        {/* Practitioners List */}
-        <View style={styles.scrollContent}>
-            {filteredConsultants.map(renderPractitioner)}
-        </View>
-    </ScrollView>
-
-    </SafeAreaView>
-);
-}
-
 const styles = StyleSheet.create({
 container: {
     flex: 1,
@@ -268,7 +206,7 @@ filterButton: {
 },
 scrollView: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
     borderRadius: 20,
     marginTop: -20
 },
@@ -349,7 +287,7 @@ timeSlotsContainer: {
     overflow: "hidden"
 },
 timeSlot: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.inputBackground,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -367,3 +305,52 @@ arrowButton: {
     padding: 8,
 },
 });
+
+return (
+    <SafeAreaView style={styles.container}>
+    <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+    
+    {/* Custom Header */}
+    <View style={styles.header}>
+        <View style={styles.headerTop}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                <Ionicons name="arrow-back" size={24} color={COLORS.white || '#333'} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>General consultants</Text>
+        </View>
+    </View>
+    <ScrollView style={styles.scrollView}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+                <Ionicons 
+                name="search" 
+                size={21} 
+                color={COLORS.placeholderText} 
+                style={styles.searchIcon}
+                />
+                <TextInput
+                style={styles.searchInput}
+                placeholder="Search"
+                placeholderTextColor={COLORS.placeholderText}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+                enterKeyHint='search'
+                />
+            </View>
+            <TouchableOpacity style={styles.filterButton}>
+                <Ionicons name="options" size={21} color={COLORS.placeholderText} />
+            </TouchableOpacity>
+        </View>
+        {/* Practitioners List */}
+        <View style={styles.scrollContent}>
+            {filteredConsultants.map(renderPractitioner)}
+        </View>
+    </ScrollView>
+
+    </SafeAreaView>
+);
+
+}
+

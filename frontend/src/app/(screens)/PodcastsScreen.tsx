@@ -63,8 +63,8 @@ const PodcastsScreen = () => {
   );
 
   const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fafafa' },
-  header: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  header: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, backgroundColor: COLORS.background, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   backButton: { padding: 8, marginRight: 12 },
   headerTitle: { fontSize: 24, fontWeight: '700', color: COLORS.textDark },
   headerDescription: { fontSize: 15, color: COLORS.textDark, marginTop: 2, fontWeight: '400' },
@@ -74,7 +74,7 @@ const PodcastsScreen = () => {
     flex: 1,
     minWidth: 0,
     maxWidth: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 16,
     marginBottom: 20,
     shadowColor: '#000',
@@ -90,7 +90,7 @@ const PodcastsScreen = () => {
   cardTitleRow: { fontSize: 18, fontWeight: '700', color: COLORS.textDark, marginBottom: 6 },
   cardDescriptionRow: { fontSize: 13, color: COLORS.grey, lineHeight: 18, fontWeight: '400', marginBottom: 8 },
   downloadButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, borderRadius: 25, paddingVertical: 10, paddingHorizontal: 22, alignSelf: 'center', marginTop: 8, marginBottom: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 2 },
-  downloadButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  downloadButtonText: { color: COLORS.white, fontWeight: '600', fontSize: 16 },
 });
 
   return (

@@ -44,14 +44,14 @@ const AppointmentsScreen = () => {
   const { COLORS = {
     background: '#fff',
     textDark: '#000',
-    primary: '#007AFF',
+    primary: '#007AFF',   
     border: '#ccc',
     cardBackground: '#f9f9f9',
     textSecondary: '#666',
     primaryLight: '#4da8ff',
-    error: '#FF3B30'
+    error: '#FF3B30' 
   }, mode } = useTheme();
-  const auth = useAuth() as AuthContext;
+  const auth = useAuth() as AuthContext; 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [searchQuery, setSearchQuery] = useState('');

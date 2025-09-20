@@ -266,23 +266,28 @@ export const updateProfile = async(currentEmail, fieldsToUpdate, req) => {
         const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [currentEmail]);
         let userTable = null;
         let userId = null;
+        console.log(users)
 
         if (users && users.length > 0) {
             userTable = 'users';
             userId = users[0].id;
+            console.log(userTable, userId);
         } else {
             const [consultants] = await pool.query('SELECT id FROM consultants WHERE email = ?', [currentEmail]);
             if (consultants && consultants.length > 0) {
                 userTable = 'consultants';
                 userId = consultants[0].id;
+                console.log(userTable, userId);
             } else {
                 const [admins] = await pool.query('SELECT id FROM admin WHERE email = ?', [currentEmail]);
                 if (admins && admins.length > 0) {
                     userTable = 'admin';
                     userId = admins[0].id;
+                    console.log(userTable, userId);
                 }
             }
         }
+        console.log(userTable, userId);
 
         if (!userTable || !userId) {
             return { success: false, message: "User profile not found." };

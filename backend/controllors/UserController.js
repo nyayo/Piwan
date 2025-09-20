@@ -135,6 +135,9 @@ export const del_consultant = async(req, res) => {
 export const prof_update = async(req, res) => {
     const { username, email, first_name, last_name, phone, profile_image } = req.body;
     const currentEmail = req.user.email;
+    console.log(req.body);
+    console.log(req.user.email);
+    // Ensure at least one field is provided for update 
 
     const fieldsToUpdate = { username, email, first_name, last_name, phone, profile_image };
     const hasValidFields = Object.values(fieldsToUpdate).some(field => field !== undefined && field !== null && field !== '');

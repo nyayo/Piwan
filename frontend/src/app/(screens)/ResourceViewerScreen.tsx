@@ -71,8 +71,8 @@ const ResourceViewerScreen = () => {
       // PDF: use Google Docs Viewer in WebView, full screen, no padding or margin, with floating back button
       const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(resourceUrl)}`;
       return (
-        <View style={{ flex: 1, width: '100%', height: '100%', margin: 0, padding: 0, alignSelf: 'stretch', backgroundColor: '#fff' }}>
-          <WebView source={{ uri: googleDocsUrl }} style={{ flex: 1, borderRadius: 0, overflow: 'hidden', width: '100%', height: '100%', alignSelf: 'stretch', margin: 0, padding: 0, backgroundColor: '#fff' }} />
+        <View style={{ flex: 1, width: '100%', height: '100%', margin: 0, padding: 0, alignSelf: 'stretch', backgroundColor: COLORS.background }}>
+          <WebView source={{ uri: googleDocsUrl }} style={{ flex: 1, borderRadius: 0, overflow: 'hidden', width: '100%', height: '100%', alignSelf: 'stretch', margin: 0, padding: 0, backgroundColor: COLORS.background }} />
           <TouchableOpacity
             style={{
               position: 'absolute',
@@ -107,8 +107,8 @@ const ResourceViewerScreen = () => {
   };
 
   const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fafafa' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: COLORS.background, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   backButton: { padding: 8, marginRight: 12 },
   headerTitle: { fontSize: 24, fontWeight: '700', color: COLORS.textDark },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 0, margin: 0, width: '100%' },
@@ -138,6 +138,7 @@ const ModernAudioPlayer = ({ url, title, artist, coverArt }: { url: string, titl
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  const { COLORS } = useTheme();
 
   useEffect(() => {
     let isMounted = true;
@@ -194,15 +195,15 @@ const ModernAudioPlayer = ({ url, title, artist, coverArt }: { url: string, titl
   };
 
   const modernStyles = StyleSheet.create({
-  container: { alignItems: 'center', width: '100%', padding: 24 },
-  coverArt: { width: 120, height: 120, borderRadius: 12, marginBottom: 16 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 4, color: '#222' },
-  artist: { fontSize: 16, color: '#666', marginBottom: 16 },
-  slider: { width: '100%', height: 40 },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
-  time: { fontSize: 12, color: '#888' },
-  playButton: { backgroundColor: '#007AFF', borderRadius: 32, padding: 18, marginTop: 16 },
-});
+    container: { alignItems: 'center', width: '100%', padding: 24 },
+    coverArt: { width: 120, height: 120, borderRadius: 12, marginBottom: 16 },
+    title: { fontSize: 20, fontWeight: 'bold', marginBottom: 4, color: COLORS.textDark },
+    artist: { fontSize: 16, color: COLORS.grey, marginBottom: 16 },
+    slider: { width: '100%', height: 40 },
+    timeRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+    time: { fontSize: 12, color: COLORS.lightGrey },
+    playButton: { backgroundColor: COLORS.primary, borderRadius: 32, padding: 18, marginTop: 16 },
+  });
 
   return (
     <View style={modernStyles.container}>

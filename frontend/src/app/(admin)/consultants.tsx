@@ -182,7 +182,7 @@ const ConsultantManagementScreen = () => {
         Alert.alert('Error', response.message || 'Failed to update consultant');
       }
     } catch (error) {
-      Alert.alert('Error', 'An error occurred while updating consultant');
+      Alert.alert('Error', error.message);
     }
   };
 
@@ -260,7 +260,7 @@ const ConsultantManagementScreen = () => {
     consultant.email || 'N/A',
     consultant.profession || 'N/A',
     consultant.location || 'N/A',
-    consultant.rating ? consultant.rating.toFixed(2) : 'N/A',
+    consultant.rating ? consultant.rating : 'N/A',
     '' // Actions (handled in renderCell)
   ]);
 

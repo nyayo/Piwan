@@ -19,30 +19,8 @@ import { useConsultant } from '../../context/consultantContext';
 import generateTimeSlots from '../../helper/timeSlot';
 import RenderTimeSlot, { TimeSlot } from '../../components/TimeSlot';
 import { createAppointment, getConsultantAppointments, getDateRange, sendPushNotificationToConsultant } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 
-const COLORS = {
-  primary: "#1976D2",
-  primaryTeal: "#20B2AA",
-  textPrimary: "#1a4971",
-  textSecondary: "#6d93b8",
-  textDark: "#0d2b43",
-  placeholderText: "#767676",
-  background: "#e3f2fd",
-  cardBackground: "#f5f9ff",
-  inputBackground: "#f0f8ff",
-  border: "#bbdefb",
-  white: "#ffffff",
-  black: "#000000",
-  grey: "#808080",
-  lightGrey: "#f1f1f1",
-  error: "#FF4444",
-  primaryLight: "#E6F0FA",
-  selectedDate: "#1976D2",
-  infoBackground: "#E8F5E8",
-  infoText: "#2E7D32",
-  disabledText: "#CCCCCC",
-  pastDateBackground: "#F5F5F5"
-};
 
 // Calendar utility functions
 const getMonthNames = () => [
@@ -142,6 +120,7 @@ const getTodayString = () => new Date().toISOString().split('T')[0];
 export default function AppointmentScheduleScreen() {
   const { selectedConsultant, appointmentData, updateAppointmentData, clearConsultant } = useConsultant();
   const navigation = useNavigation();
+  const { COLORS } = useTheme();
   
   // Initialize with current date
   const today = new Date();
@@ -552,10 +531,12 @@ export default function AppointmentScheduleScreen() {
     return () => clearInterval(interval);
   }, [selectedConsultant, currentYear, currentMonth]);
 
-  // Show mood modal on mount (always, or you can add logic to only show once per appointment)
+  // Only show mood modal if no mood is set
   useEffect(() => {
-    setMoodModalVisible(true);
-  }, []);
+    if (selectedMoodValue === null) {
+      setMoodModalVisible(true);
+    }
+  }, [selectedMoodValue]);
 
   // Save mood selection (local only)
   const handleMoodSelect = (value: number) => {
@@ -566,197 +547,7 @@ export default function AppointmentScheduleScreen() {
 
   const availableSlots = getAvailableTimeSlots();
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.white} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Schedule Your Appointment</Text>
-        </View>
-      </View>
-
-      <View style={styles.mainContent}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.content}>
-            
-            {/* Info Banner */}
-            <View style={styles.infoBanner}>
-              <Ionicons name="information-circle" size={20} color={COLORS.primary} />
-              <Text style={styles.infoText}>
-                If you do not attend the consultation, it will be{' '}
-                <Text style={styles.infoHighlight}>canceled 10 minutes after</Text> it starts, and no refund will be provided.
-              </Text>
-            </View>
-
-            {/* Doctor Info Card */}
-            <View style={styles.doctorCard}>
-              <Image 
-                source={{ uri: selectedConsultant?.profile_image || practitioner.profilePicture }}
-                style={styles.doctorImage}
-              />
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>
-                  {selectedConsultant ? `${selectedConsultant.first_name} ${selectedConsultant.last_name}` : practitioner.name}
-                </Text>
-                <Text style={styles.doctorSpecialty}>
-                  {selectedConsultant?.profession || practitioner.specialty}
-                </Text>
-              </View>
-              <View style={styles.appointmentTimeInfo}>
-                <Text style={styles.appointmentTime}>{selectedTime}</Text>
-                <Text style={styles.appointmentDate}>
-                  {selectedDate ? selectedDate.fullDate : 'Select date'}
-                </Text>
-              </View>
-            </View>
-
-            {/* Enhanced Calendar */}
-            <View style={styles.calendarContainer}>
-              <View style={styles.calendarHeader}>
-                <Text style={styles.monthYear}>
-                  {monthNames[currentMonth]} {currentYear}
-                </Text>
-                <View style={styles.monthNavigation}>
-                  <TouchableOpacity 
-                    style={[styles.navButton, !canNavigatePrevious() && styles.disabledNavButton]}
-                    onPress={() => navigateMonth(-1)}
-                    disabled={!canNavigatePrevious()}
-                  >
-                    <Ionicons 
-                      name="chevron-back" 
-                      size={20} 
-                      color={canNavigatePrevious() ? COLORS.textDark : COLORS.disabledText} 
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.navButton} onPress={() => navigateMonth(1)}>
-                    <Ionicons name="chevron-forward" size={20} color={COLORS.textDark} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              <View style={styles.weekDaysContainer}>
-                {weekDays.map((day, index) => (
-                  <Text key={index} style={styles.weekDayText}>{day}</Text>
-                ))}
-              </View>
-              
-              <View style={styles.calendarGrid}>
-                {calendarDays.map((dayObj, index) => renderCalendarDay(dayObj, index))}
-              </View>
-            </View>
-
-            {/* Time Selection */}
-            <View style={styles.timeContainer}>
-              <Text style={styles.sectionTitle}>Time</Text>
-              {isLoadingAvailability ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
-              ) : (
-                <View style={styles.timeSlotsGrid}>
-                  {availableSlots.map((timeSlot, index) => <RenderTimeSlot key={index} timeSlot={timeSlot} index={index} selectedTime={selectedTime} handleTimeSelect={handleTimeSelect} />)}
-                </View>
-              )}
-            </View>
-
-            {/* Reason for Visit */}
-            <View style={styles.reasonContainer}>
-              <Text style={styles.sectionTitle}>Describe a reason for visit</Text>
-              <TextInput
-                style={styles.reasonInput}
-                multiline
-                value={reasonForVisit}
-                onChangeText={setReasonForVisit}
-                placeholder="Describe your symptoms or reason for the visit..."
-                placeholderTextColor={COLORS.placeholderText}
-              />
-            </View>
-            
-            {/* Add bottom padding to prevent content from being hidden behind fixed bottom */}
-            <View style={styles.bottomPadding} />
-          </View>
-        </ScrollView>
-
-        {/* Fixed Bottom Container */}
-        <View style={styles.fixedBottomContainer}>
-          <View style={styles.priceContainer}>
-            <Text style={styles.priceText}>{practitioner.price},00 USD</Text>
-            <Text style={styles.appointmentDetails}>
-              {selectedTime}, {selectedDate ? selectedDate.fullDate : 'No date selected'}
-            </Text>
-          </View>
-          
-          <TouchableOpacity style={styles.bookButton} onPress={handleBookAppointment}>
-            <Text style={styles.bookButtonText}>Book now</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Mood Selection Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={moodModalVisible}
-        onRequestClose={() => setMoodModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>How do you feel today?</Text>
-            <View style={styles.moodOptions}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
-                <TouchableOpacity
-                  key={value}
-                  style={[styles.moodOption, selectedMoodValue === value && styles.selectedMoodOption]}
-                  onPress={() => handleMoodSelect(value)}
-                >
-                  <Text style={styles.moodOptionText}>{value}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.moodMessage}>{moodMessage}</Text>
-            <TouchableOpacity style={styles.closeModalButton} onPress={() => setMoodModalVisible(false)}>
-              <Text style={styles.closeModalButtonText}>Skip for now</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Mood Modal */}
-      <Modal
-        visible={moodModalVisible}
-        transparent
-        animationType="slide"
-      >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 320, alignItems: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: COLORS.textDark }}>How are you feeling today?</Text>
-            <Text style={{ color: COLORS.textSecondary, marginBottom: 20 }}>Select your mood (1 = worst, 10 = best)</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
-              {Array.from({ length: 10 }).map((_, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={{
-                    width: 36, height: 36, borderRadius: 18, margin: 6, alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: selectedMoodValue === i + 1 ? COLORS.primary : COLORS.lightGrey,
-                  }}
-                  onPress={() => handleMoodSelect(i + 1)}
-                >
-                  <Text style={{ color: selectedMoodValue === i + 1 ? COLORS.white : COLORS.textDark, fontWeight: 'bold' }}>{i + 1}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-      </Modal>
-      
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -789,7 +580,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
     borderRadius: 20,
     marginTop: -20,
   },
@@ -964,7 +755,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
     padding: 20,
     paddingBottom: 30,
     shadowColor: '#000',
@@ -1066,6 +857,41 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  moodBar: {
+    width: '100%',
+    height: 40,
+    backgroundColor: COLORS.lightGrey,
+    borderRadius: 20,
+    overflow: 'hidden',
+    flexDirection: 'row',
+  },
+  moodBarSection: {
+    flex: 1,
+    height: '100%',
+  },
+  moodLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  moodLabelText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+  },
+  selectedMoodText: {
+    textAlign: 'center',
+    marginTop: 16,
+    color: COLORS.textDark,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  moodMessageText: {
+    textAlign: 'center',
+    marginTop: 8,
+    color: COLORS.primary,
+    fontSize: 14,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -1114,3 +940,193 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+      
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Schedule Your Appointment</Text>
+        </View>
+      </View>
+
+      <View style={styles.mainContent}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.content}>
+            
+            {/* Info Banner */}
+            <View style={styles.infoBanner}>
+              <Ionicons name="information-circle" size={20} color={COLORS.primary} />
+              <Text style={styles.infoText}>
+                If you do not attend the consultation, it will be{' '}
+                <Text style={styles.infoHighlight}>canceled 10 minutes after</Text> it starts, and no refund will be provided.
+              </Text>
+            </View>
+
+            {/* Doctor Info Card */}
+            <View style={styles.doctorCard}>
+              <Image 
+                source={{ uri: selectedConsultant?.profile_image || practitioner.profilePicture }}
+                style={styles.doctorImage}
+              />
+              <View style={styles.doctorInfo}>
+                <Text style={styles.doctorName}>
+                  {selectedConsultant ? `${selectedConsultant.first_name} ${selectedConsultant.last_name}` : practitioner.name}
+                </Text>
+                <Text style={styles.doctorSpecialty}>
+                  {selectedConsultant?.profession || practitioner.specialty}
+                </Text>
+              </View>
+              <View style={styles.appointmentTimeInfo}>
+                <Text style={styles.appointmentTime}>{selectedTime}</Text>
+                <Text style={styles.appointmentDate}>
+                  {selectedDate ? selectedDate.fullDate : 'Select date'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Enhanced Calendar */}
+            <View style={styles.calendarContainer}>
+              <View style={styles.calendarHeader}>
+                <Text style={styles.monthYear}>
+                  {monthNames[currentMonth]} {currentYear}
+                </Text>
+                <View style={styles.monthNavigation}>
+                  <TouchableOpacity 
+                    style={[styles.navButton, !canNavigatePrevious() && styles.disabledNavButton]}
+                    onPress={() => navigateMonth(-1)}
+                    disabled={!canNavigatePrevious()}
+                  >
+                    <Ionicons 
+                      name="chevron-back" 
+                      size={20} 
+                      color={canNavigatePrevious() ? COLORS.textDark : COLORS.disabledText} 
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.navButton} onPress={() => navigateMonth(1)}>
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.textDark} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              <View style={styles.weekDaysContainer}>
+                {weekDays.map((day, index) => (
+                  <Text key={index} style={styles.weekDayText}>{day}</Text>
+                ))}
+              </View>
+              
+              <View style={styles.calendarGrid}>
+                {calendarDays.map((dayObj, index) => renderCalendarDay(dayObj, index))}
+              </View>
+            </View>
+
+            {/* Time Selection */}
+            <View style={styles.timeContainer}>
+              <Text style={styles.sectionTitle}>Time</Text>
+              {isLoadingAvailability ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <View style={styles.timeSlotsGrid}>
+                  {availableSlots.map((timeSlot, index) => <RenderTimeSlot key={index} timeSlot={timeSlot} index={index} selectedTime={selectedTime} handleTimeSelect={handleTimeSelect} />)}
+                </View>
+              )}
+            </View>
+
+            {/* Reason for Visit */}
+            <View style={styles.reasonContainer}>
+              <Text style={styles.sectionTitle}>Describe a reason for visit</Text>
+              <TextInput
+                style={styles.reasonInput}
+                multiline
+                value={reasonForVisit}
+                onChangeText={setReasonForVisit}
+                placeholder="Describe your symptoms or reason for the visit..."
+                placeholderTextColor={COLORS.placeholderText}
+              />
+            </View>
+            
+            {/* Add bottom padding to prevent content from being hidden behind fixed bottom */}
+            <View style={styles.bottomPadding} />
+          </View>
+        </ScrollView>
+
+        {/* Fixed Bottom Container */}
+        <View style={styles.fixedBottomContainer}>
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceText}>{practitioner.price},00 USD</Text>
+            <Text style={styles.appointmentDetails}>
+              {selectedTime}, {selectedDate ? selectedDate.fullDate : 'No date selected'}
+            </Text>
+          </View>
+          
+          <TouchableOpacity style={styles.bookButton} onPress={handleBookAppointment}>
+            <Text style={styles.bookButtonText}>Book now</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Mood Selection Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={moodModalVisible}
+        onRequestClose={() => setMoodModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>How do you feel today?</Text>
+            <Text style={{ color: COLORS.textSecondary, marginBottom: 20 }}>Slide to set your mood</Text>
+            <View style={{ width: '100%', marginBottom: 20 }}>
+              {/* Mood Bar Container */}
+              <View style={styles.moodBar}>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={[
+                      styles.moodBarSection,
+                      {
+                        backgroundColor: i < 2 ? '#FF6B6B' : 
+                                       i < 4 ? '#FFD93D' :
+                                       i < 6 ? '#6BCB77' :
+                                       i < 8 ? '#4D96FF' :
+                                       '#9B72AA',
+                        opacity: selectedMoodValue && i < selectedMoodValue ? 1 : 0.3,
+                      }
+                    ]}
+                    onPress={() => handleMoodSelect(i + 1)}
+                  />
+                ))}
+              </View>
+              
+              <View style={styles.moodLabels}>
+                <Text style={styles.moodLabelText}>Not well</Text>
+                <Text style={styles.moodLabelText}>Very well</Text>
+              </View>
+              
+              {selectedMoodValue && (
+                <View>
+                  <Text style={styles.selectedMoodText}>
+                    {selectedMoodValue}/10
+                  </Text>
+                  <Text style={styles.moodMessageText}>
+                    {moodMessage}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity style={styles.closeModalButton} onPress={() => setMoodModalVisible(false)}>
+              <Text style={styles.closeModalButtonText}>Skip for now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      
+    </SafeAreaView>
+  );
+}

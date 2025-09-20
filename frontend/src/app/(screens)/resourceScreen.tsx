@@ -126,16 +126,16 @@ const Resources = () => {
     const styles = StyleSheet.create({
 container: {
     flex: 1,
-    backgroundColor: '#fafafa',
+    backgroundColor: COLORS.background,
 },
 headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.border || '#e0e0e0',
 },
 backButton: {
     padding: 8,
@@ -167,7 +167,7 @@ cardRow: {
 },
 card: {
     width: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground || '#fff',
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -349,7 +349,7 @@ applyButtonText: {
             showsVerticalScrollIndicator={false}
             />
         )}
-        <StatusBar style="dark" />
+        <StatusBar style="AUTO" />
         </SafeAreaView>
     );
 };

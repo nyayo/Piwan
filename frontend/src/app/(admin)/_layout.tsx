@@ -47,7 +47,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
             <DrawerContentScrollView {...props} style={{ backgroundColor: COLORS.background }}>
                 <View style={styles.profileContainer}>
                     <Image
-                        source={user.profile_pic ? { uri: user.profile_pic } : require("../../assets/emoje-logo.png")}
+                        source={user.profile_image ? { uri: user.profile_image } : require("../../assets/emoje-logo.png")}
                         style={styles.profilePic}
                     />
                     <Text style={[styles.profileName, { color: COLORS.textDark }]}>

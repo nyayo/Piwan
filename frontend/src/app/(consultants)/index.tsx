@@ -1061,14 +1061,6 @@ const ConsultantAdminHome = () => {
       justifyContent: 'center',
       gap: 8,
       marginTop: 20,
-      shadowColor: COLORS.textDark,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
     },
     actionButtonText: {
       color: COLORS.white,

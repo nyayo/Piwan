@@ -83,10 +83,10 @@ export const AuthProvider = ({ children }) => {
                 }
                 return { success: true, message: response.message };
             } else {
-                return { success: false, message: response.message };
+                return { success: false, message: 'registration failed' };
             }
         } catch (error) {
-            return { success: false, message: error.message };
+            return { success: false, message: 'ser' };
         }
     };
 

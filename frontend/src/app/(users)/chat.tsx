@@ -267,7 +267,7 @@ const UsersChatScreen = () => {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 15,
-      paddingVertical: 12,
+      paddingVertical: 4,
       borderRadius: 12,
       gap: 10,
     },
@@ -609,23 +609,6 @@ const UsersChatScreen = () => {
           </View>
         </View>
 
-        {activeTab === 'message' && (
-          <View style={styles.directMessageContainer}>
-            <TouchableOpacity 
-              style={[styles.directMessageButton, { backgroundColor: COLORS.warning }]}
-            >
-              <Text style={styles.directMessageText}>Direct Message</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.groupButton, { backgroundColor: COLORS.cardBackground }]}
-              onPress={() => setGroupModalVisible(true)}
-            >
-              <Text style={[styles.groupButtonText, { color: COLORS.textDark }]}>Group</Text>
-              <Ionicons name="add" size={16} color={COLORS.textDark} />
-            </TouchableOpacity>
-          </View>
-        )}
-
         <View style={styles.channelListContainer}>
           <ChannelList
             filters={getChannelFilters()}
@@ -731,14 +714,6 @@ const UsersChatScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-        
-        {activeTab === 'message' && (
-          <View style={styles.messageStats}>
-            <Text style={styles.statsText}>Hi, {user?.first_name || 'User'}!</Text>
-            <Text style={styles.statsText}>You have</Text>
-            <Text style={styles.statsNumber}>Stream Chat Channels</Text>
-          </View>
-        )}
       </View>
 
       {/* Tab Bar */}

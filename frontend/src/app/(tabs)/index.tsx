@@ -360,22 +360,60 @@ const Index = () => {
           animationType="slide"
         >
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 320, alignItems: 'center' }}>
+            <View style={{ backgroundColor: COLORS.background, borderRadius: 16, padding: 24, width: 320, alignItems: 'center' }}>
               <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: COLORS.textDark }}>How are you feeling today?</Text>
-              <Text style={{ color: COLORS.textSecondary, marginBottom: 20 }}>Select your mood (1 = worst, 10 = best)</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={{
-                      width: 36, height: 36, borderRadius: 18, margin: 6, alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: selectedMoodValue === i + 1 ? COLORS.primary : COLORS.lightGrey,
-                    }}
-                    onPress={() => handleMoodSelect(i + 1)}
-                  >
-                    <Text style={{ color: selectedMoodValue === i + 1 ? COLORS.white : COLORS.textDark, fontWeight: 'bold' }}>{i + 1}</Text>
-                  </TouchableOpacity>
-                ))}
+              <Text style={{ color: COLORS.textSecondary, marginBottom: 20 }}>Slide to set your mood</Text>
+              <View style={{ width: '100%', marginBottom: 20 }}>
+                {/* Mood Bar Container */}
+                <View style={{ 
+                  width: '100%', 
+                  height: 40, 
+                  backgroundColor: COLORS.lightGrey,
+                  borderRadius: 20,
+                  overflow: 'hidden',
+                  flexDirection: 'row',
+                }}>
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={{
+                        flex: 1,
+                        height: '100%',
+                        backgroundColor: i < 2 ? '#FF6B6B' : 
+                                       i < 4 ? '#FFD93D' :
+                                       i < 6 ? '#6BCB77' :
+                                       i < 8 ? '#4D96FF' :
+                                       '#9B72AA',
+                        opacity: selectedMoodValue && i < selectedMoodValue ? 1 : 0.3,
+                      }}
+                      onPress={() => handleMoodSelect(i + 1)}
+                    />
+                  ))}
+                </View>
+                
+                {/* Labels */}
+                <View style={{ 
+                  flexDirection: 'row', 
+                  justifyContent: 'space-between',
+                  marginTop: 8,
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{ color: COLORS.textSecondary, fontSize: 12 }}>Not well</Text>
+                  <Text style={{ color: COLORS.textSecondary, fontSize: 12 }}>Very well</Text>
+                </View>
+                
+                {/* Selected Value */}
+                {selectedMoodValue && (
+                  <Text style={{ 
+                    textAlign: 'center', 
+                    marginTop: 16, 
+                    color: COLORS.textDark,
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}>
+                    {selectedMoodValue}/10
+                  </Text>
+                )}
               </View>
             </View>
           </View>
@@ -407,36 +445,77 @@ const Index = () => {
           {/* Mood Tracker */}
           <View style={styles.moodTracker}>
             <Text style={styles.sectionTitle}>How are you feeling today?</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-              {moodEmojis.map((emoji, idx) => {
-                const isActive = getEmojiIndexForMood(selectedMoodValue) === idx;
-                return (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[
-                      styles.moodButton,
-                      isActive && styles.selectedMoodButton,
-                      { width: 48, height: 48, borderRadius: 24, marginHorizontal: 4, alignItems: 'center', justifyContent: 'center' }
-                    ]}
-                    onPress={() => setMoodModalVisible(true)}
-                  >
-                    <Text style={{ fontSize: 28 }}>{emoji}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            {selectedMoodValue ? (
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ fontSize: 16, color: COLORS.textDark, fontWeight: '600' }}>Mood: {selectedMoodValue} / 10</Text>
-                <Text style={{ color: COLORS.primary, fontSize: 15, marginTop: 4 }}>{moodMessage}</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
+              <TouchableOpacity
+                style={[
+                  styles.moodButton,
+                  { 
+                    width: 80, 
+                    height: 80, 
+                    borderRadius: 40, 
+                    marginRight: 16, 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: COLORS.primaryLight || '#E6F0FA',
+                    borderWidth: 2,
+                    borderColor: COLORS.primary,
+                  }
+                ]}
+                onPress={() => setMoodModalVisible(true)}
+              >
+                <Text style={{ fontSize: 48 }}>
+                  {selectedMoodValue ? moodEmojis[getEmojiIndexForMood(selectedMoodValue)] : '😐'}
+                </Text>
+              </TouchableOpacity>
+              
+              <View style={{ flex: 1 }}>
+                {selectedMoodValue ? (
+                  <>
+                    {/* Mood Bar Container */}
+                    <View style={{ 
+                      width: '100%', 
+                      height: 24, 
+                      backgroundColor: COLORS.lightGrey,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      flexDirection: 'row',
+                      marginBottom: 8
+                    }}>
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <View
+                          key={i}
+                          style={{
+                            flex: 1,
+                            height: '100%',
+                            backgroundColor: i < 2 ? '#FF6B6B' : 
+                                           i < 4 ? '#FFD93D' :
+                                           i < 6 ? '#6BCB77' :
+                                           i < 8 ? '#4D96FF' :
+                                           '#9B72AA',
+                            opacity: i < selectedMoodValue ? 1 : 0.3,
+                          }}
+                        />
+                      ))}
+                    </View>
+                    <Text style={{ color: COLORS.primary, fontSize: 15, marginBottom: 8 }}>
+                      {moodMessage}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={{ color: COLORS.textSecondary, fontSize: 15, marginBottom: 8 }}>
+                    Tap to set your mood for today
+                  </Text>
+                )}
+                <TouchableOpacity
+                  style={[styles.moodButton, { alignSelf: 'flex-start' }]}
+                  onPress={() => setMoodModalVisible(true)}
+                >
+                  <Text style={{ color: COLORS.primary, fontWeight: '600' }}>
+                    {selectedMoodValue ? 'Update Mood' : 'Set Mood'}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            ) : null}
-            <TouchableOpacity
-              style={[styles.moodButton, { alignSelf: 'flex-start', marginTop: 8 }]}
-              onPress={() => setMoodModalVisible(true)}
-            >
-              <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Update Mood</Text>
-            </TouchableOpacity>
+            </View>
           </View>
 
           {/* Upcoming Events Carousel */}

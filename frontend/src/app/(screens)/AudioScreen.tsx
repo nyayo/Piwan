@@ -65,15 +65,15 @@ const AudioScreen = () => {
   const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#fafafa' 
+    backgroundColor: COLORS.background 
   },
   header: { 
     flexDirection: 'row', 
     alignItems: 'flex-start', 
     padding: 16, 
-    backgroundColor: '#fff', 
+    backgroundColor: COLORS.background, 
     borderBottomWidth: 1, 
-    borderBottomColor: '#f0f0f0' 
+    borderBottomColor: COLORS.border 
   },
   backButton: { 
     padding: 8, 
@@ -102,7 +102,7 @@ const AudioScreen = () => {
     flex: 1,
     minWidth: 0,
     maxWidth: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 16,
     marginBottom: 20,
     shadowColor: '#000',
@@ -155,7 +155,7 @@ const AudioScreen = () => {
     elevation: 2 
   },
   downloadButtonText: { 
-    color: '#fff', 
+    color: COLORS.white, 
     fontWeight: '600', 
     fontSize: 16 
   },

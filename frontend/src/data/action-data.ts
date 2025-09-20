@@ -17,22 +17,23 @@ export interface ActionType {
     action: () => void;
 }
 
+
 const data: ActionType[] = [
     {
     id: 1,
-    title: 'Emergency Call',
-    subtitle: '24/7 Crisis Support',
-    icon: 'call',
-    backgroundColor: '#FF4444',
-    action: () => handleEmergencyCall(),
-},
-{
-    id: 2,
     title: 'Mental Health Resources',
     subtitle: 'Articles & Guides',
     icon: 'book',
     backgroundColor: '#4A90E2',
     action: () => handleResources(),
+},
+{
+    id: 2,
+    title: 'Emergency Call',
+    subtitle: '24/7 Crisis Support',
+    icon: 'call',
+    backgroundColor: '#FF4444',
+    action: () => handleEmergencyCall(),
 },
 {
     id: 3,

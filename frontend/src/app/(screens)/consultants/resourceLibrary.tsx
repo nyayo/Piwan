@@ -399,7 +399,7 @@ export default function MediaLibraryScreen() {
   const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
@@ -408,7 +408,7 @@ export default function MediaLibraryScreen() {
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
   },
   headerTitle: {
     fontSize: 20,
@@ -559,7 +559,7 @@ export default function MediaLibraryScreen() {
     paddingHorizontal: 20,
   },
   modalContent: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
     borderRadius: 20,
     padding: 24,
     width: '100%',
@@ -601,7 +601,7 @@ export default function MediaLibraryScreen() {
     padding: 12,
     fontSize: 14,
     color: COLORS.textDark,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.inputBackground,
   },
   textArea: {
     height: 80,
@@ -615,7 +615,7 @@ export default function MediaLibraryScreen() {
     borderColor: COLORS.lightGrey,
     borderRadius: 12,
     padding: 12,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.inputBackground,
   },
   dropdownText: {
     fontSize: 14,

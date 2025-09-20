@@ -510,7 +510,10 @@ const ProfileUpdateScreen = () => {
                         <View style={styles.pickerContainer}>
                             <Picker
                                 selectedValue={selectedGender || form.watch('gender')}
-                                onValueChange={(itemValue) => setSelectedGender(itemValue)}
+                                onValueChange={(itemValue) => {
+                                    setSelectedGender(itemValue);
+                                    form.setValue('gender', itemValue);
+                                }}
                                 style={styles.picker}
                             >
                                 <Picker.Item label="Select Gender" value="" />

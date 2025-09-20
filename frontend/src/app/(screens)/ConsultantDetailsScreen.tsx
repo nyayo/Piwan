@@ -372,10 +372,10 @@ export default function DoctorDetailsScreen() {
   },
   scrollView: {
       flex: 1,
-      backgroundColor: COLORS.white,
+      backgroundColor: COLORS.background,
   },
   profileCard: {
-      backgroundColor: COLORS.white,
+      backgroundColor: COLORS.background,
       alignItems: 'center',
       paddingTop: 30,
       paddingBottom: 20,
@@ -398,7 +398,7 @@ export default function DoctorDetailsScreen() {
       position: 'absolute',
       bottom: -5,
       right: -5,
-      backgroundColor: COLORS.white,
+      backgroundColor: COLORS.cardBackground,
       borderRadius: 20,
       paddingHorizontal: 8,
       paddingVertical: 4,
@@ -431,7 +431,7 @@ export default function DoctorDetailsScreen() {
       marginBottom: 8,
   },
   infoContainer: {
-      backgroundColor: COLORS.white,
+      backgroundColor: COLORS.background,
       paddingHorizontal: 24,
       paddingVertical: 16,
   },
@@ -456,7 +456,7 @@ export default function DoctorDetailsScreen() {
       textAlign: 'right',
   },
   reviewsContainer: {
-      backgroundColor: COLORS.white,
+    //   backgroundColor: COLORS.backgroun,
       paddingHorizontal: 24,
       paddingVertical: 24,
   },
@@ -564,7 +564,7 @@ export default function DoctorDetailsScreen() {
       color: COLORS.textSecondary,
   },
   reviewCard: {
-      backgroundColor: '#f9f9f9',
+      backgroundColor: COLORS.Background,
       borderRadius: 12,
       padding: 16,
       marginBottom: 12,
@@ -629,7 +629,7 @@ export default function DoctorDetailsScreen() {
   // Modal Styles
   modalContainer: {
       flex: 1,
-      backgroundColor: COLORS.white,
+      backgroundColor: COLORS.background,
   },
   modalHeader: {
       flexDirection: 'row',

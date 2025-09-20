@@ -81,7 +81,7 @@ export default function ProfileScreen() {
   const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white
+    backgroundColor: COLORS.background
   },
   profileSection: {
     alignItems: 'center',
@@ -176,7 +176,7 @@ export default function ProfileScreen() {
     paddingHorizontal: 20,
   },
   modalContent: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
     borderRadius: 20,
     padding: 24,
     width: '100%',

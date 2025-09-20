@@ -180,7 +180,7 @@ export default function ProfileScreen() {
       paddingHorizontal: 20,
     },
     modalContent: {
-      backgroundColor: COLORS.white,
+      backgroundColor: COLORS.background,
       borderRadius: 20,
       padding: 24,
       width: '100%',

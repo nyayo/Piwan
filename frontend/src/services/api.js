@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {API_BASE_URL as api_url} from '@env';
 // Configure base URL (update with your backend URL)
-export const API_BASE_URL = "https://a1537f503139.ngrok-free.app/api"; // Use your local IP
+export const API_BASE_URL = api_url; // Use your local IP
 // For development on physical device, use your computer's IP address
 // For iOS simulator: http://localhost:3000/api
 // For Android emulator: http://10.0.2.2:3000/api
@@ -173,7 +173,7 @@ export const loginUser = async (email, password) => {
     if (response.data.success && response.data.accessToken && response.data.refreshToken) {
       await storeAuthData(response.data.accessToken, response.data.refreshToken, response.data.user);
     }
-    
+    console.log(response.data);
     return response.data;
   } catch (error) {
     throw handleApiError(error);
@@ -249,7 +249,8 @@ export const updateUserProfile = async (profileData) => {
     if (response.data.success) {
       const currentAuthData = await getAuthData();
       const updatedUser = { ...currentAuthData.user, ...response.data.user };
-      await storeAuthData(currentAuthData.token, updatedUser);
+      // Preserve existing tokens while updating user data
+      await storeAuthData(currentAuthData.accessToken, currentAuthData.refreshToken, updatedUser);
     }
     
     return response.data;
